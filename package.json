@@ -1,0 +1,15 @@
+{
+  "name": "com.jeomseon.unityscripts",
+  "version": "1.0.0",
+  "description": "Jeomseon Unity Script Pack",
+  "dependencies": {
+    "com.unity.localization": "1.4.5",
+    "com.unity.2d.sprite": "1.0.0",
+    "com.unity.textmeshpro": "3.2.0-pre.10",
+    "com.unity.addressables": "1.21.21",
+    "com.unity.editorcoroutines": "1.0.1",
+    "com.unity.inputsystem": "1.7.0",
+    "com.neuecc.unirx": "https://github.com/yomunsam/UniRx.UPM.git#master",
+    "com.alexeytaranov.serializereferencedropdown": "https://github.com/AlexeyTaranov/SerializeReferenceDropdown.git#0.4.0"
+  }
+}

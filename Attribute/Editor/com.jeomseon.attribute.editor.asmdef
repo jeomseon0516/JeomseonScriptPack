@@ -1,0 +1,24 @@
+{
+    "name": "com.jeomseon.attribute.editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:478a2357cc57436488a56e564b08d223",
+        "GUID:eec0964c48f6f4e40bc3ec2257ccf8c5",
+        "GUID:2e77701fe0ceda44fb763f03ee704c37",
+        "GUID:df1bf7910f741454da03459ecdb5adb5",
+        "GUID:30caffa1b8021934f9389778034cca26",
+        "GUID:6e3364be98747427c96c68a9fc73a3e1",
+        "GUID:36b2a6f7c90d49e468cdcf35ea92b22a",
+        "GUID:401ec62347060dc4fa768c0af98fd8b5",
+        "GUID:a162c4d644b99554e8272c526b2ccaf9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,16 @@
+{
+    "name": "com.jeomseon.scriptableobject",
+    "rootNamespace": "",
+    "references": [
+        "GUID:36b2a6f7c90d49e468cdcf35ea92b22a"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

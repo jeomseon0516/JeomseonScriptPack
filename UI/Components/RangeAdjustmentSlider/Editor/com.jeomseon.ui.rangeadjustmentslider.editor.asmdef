@@ -1,0 +1,17 @@
+{
+    "name": "com.jeomseon.ui.rangeadjustmentslider.editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:6e3364be98747427c96c68a9fc73a3e1",
+        "GUID:90d960b875d2d5e4c8a9d6d50515b5dc"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

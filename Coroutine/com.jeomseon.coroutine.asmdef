@@ -1,0 +1,16 @@
+{
+    "name": "com.jeomseon.coroutine",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0ab9a023f59351a40afaca6a33575d40"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

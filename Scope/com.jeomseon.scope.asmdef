@@ -1,0 +1,16 @@
+{
+    "name": "com.jeomseon.scope",
+    "rootNamespace": "",
+    "references": [
+        "GUID:a162c4d644b99554e8272c526b2ccaf9"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,16 @@
+{
+    "name": "com.jeomseon.extensions",
+    "rootNamespace": "",
+    "references": [
+        "GUID:df1bf7910f741454da03459ecdb5adb5"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

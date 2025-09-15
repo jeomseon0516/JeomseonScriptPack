@@ -1,0 +1,17 @@
+{
+    "name": "AssemblyLoadableScriptableObjectEditor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:6e3364be98747427c96c68a9fc73a3e1",
+        "GUID:1a980aad959af6d479ffd0c4812af691"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
