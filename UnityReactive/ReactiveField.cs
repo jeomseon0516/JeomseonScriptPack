@@ -1,3 +1,4 @@
+#if SERIALIZEDREFERENCEDROPDOWN_INSTALLED
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -134,3 +135,4 @@ namespace Jeomseon.UnityReactive
         public override string ToString() => Value.ToString();
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if SERIALIZEDREFERENCEDROPDOWN_INSTALLED && UNIRX_INSTALLED
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -53,3 +54,4 @@ namespace Jeomseon.UnityReactive
         }
     }
 }
+#endif

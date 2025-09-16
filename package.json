@@ -10,14 +10,11 @@
     "com.unity.addressables": "1.21.21",
     "com.unity.editorcoroutines": "1.0.1",
     "com.unity.inputsystem": "1.7.0",
-    "com.coffee.git-dependency-resolver": "2.0.0"
+    "com.neuecc.unirx": "https://github.com/yomunsam/UniRx.UPM.git#master",
+    "com.alexeytaranov.serializereferencedropdown": "https://github.com/AlexeyTaranov/SerializeReferenceDropdown.git#0.4.0"
   },
   "author": {
     "name": "jeomseon0516",
     "url": "https://github.com/jeomseon0516"
-  },
-  "gitDependencies": {
-    "com.neuecc.unirx": "https://github.com/yomunsam/UniRx.UPM.git#master",
-    "com.alexeytaranov.serializereferencedropdown": "https://github.com/AlexeyTaranov/SerializeReferenceDropdown.git#0.4.0"
   }
 }

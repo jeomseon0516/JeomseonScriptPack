@@ -1,3 +1,4 @@
+#if SERIALIZEDREFERENCEDROPDOWN_INSTALLED && UNIRX_INSTALLED
 using UnityEngine;
 
 namespace Jeomseon.UnityReactive
@@ -49,3 +50,4 @@ namespace Jeomseon.UnityReactive
         public T Process<T>(T value);
     }
 }
+#endif

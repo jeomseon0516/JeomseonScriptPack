@@ -3,10 +3,11 @@ using System;
 using System.Reflection;
 using UnityEditor;
 using Object = UnityEngine.Object;
-using Attribute = System.Attribute;
 
 namespace Jeomseon.Editor.Extensions
 {
+    using Attribute = System.Attribute;
+
     public static class SerializedPropertyExtensions
     {
         public static Type GetPropertyType(this SerializedProperty prop)

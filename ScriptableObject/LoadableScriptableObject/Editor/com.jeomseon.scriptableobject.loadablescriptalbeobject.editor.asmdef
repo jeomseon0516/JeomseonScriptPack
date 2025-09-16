@@ -1,9 +1,8 @@
 {
-    "name": "AssemblyLoadableScriptableObjectEditor",
+    "name": "com.jeomseon.scriptableobject.loadablescriptalbeobject.editor",
     "rootNamespace": "",
     "references": [
-        "GUID:6e3364be98747427c96c68a9fc73a3e1",
-        "GUID:1a980aad959af6d479ffd0c4812af691"
+        "GUID:1921ee7125012874589b2ee7d32bf356"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
