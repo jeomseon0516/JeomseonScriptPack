@@ -2,6 +2,7 @@
   "name": "com.jeomseon.unityscripts",
   "version": "1.0.0",
   "description": "Jeomseon Unity Script Pack",
+  "unity": "2022.3",
   "dependencies": {
     "com.unity.localization": "1.4.5",
     "com.unity.2d.sprite": "1.0.0",
@@ -11,5 +12,9 @@
     "com.unity.inputsystem": "1.7.0",
     "com.neuecc.unirx": "https://github.com/yomunsam/UniRx.UPM.git#master",
     "com.alexeytaranov.serializereferencedropdown": "https://github.com/AlexeyTaranov/SerializeReferenceDropdown.git#0.4.0"
+  },
+  "author": {
+    "name": "jeomseon0516",
+    "url": "https://github.com/jeomseon0516"
   }
 }
