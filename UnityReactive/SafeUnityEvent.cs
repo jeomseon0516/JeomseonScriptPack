@@ -1,4 +1,3 @@
-#if SERIALIZEDREFERENCEDROPDOWN_INSTALLED && UNIRX_INSTALLED
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -123,4 +122,3 @@ namespace Jeomseon.UnityReactive
         public void Invoke(T0 item1, T1 item2, T2 item3, T3 item4) => _unityEvent.Invoke(item1, item2, item3, item4);
     }
 }
-#endif
