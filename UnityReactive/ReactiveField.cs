@@ -1,4 +1,4 @@
-#if SERIALIZEDREFERENCEDROPDOWN_INSTALLED
+#if SERIALIZEREFERENCEDROPDOWN_INSTALLED
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
