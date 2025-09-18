@@ -57,7 +57,6 @@ namespace Jeomseon.Extensions
 
         public static void ForEach<T>(this IList<T> source, Action<T> action)
         {
-            // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < source.Count; i++) action.Invoke(source[i]);
         }
 
@@ -65,7 +64,7 @@ namespace Jeomseon.Extensions
         {
             if (index < 0 || index >= source.Count)
             {
-                result = default(T);
+                result = default;
                 return false;
             }
 

@@ -7,7 +7,6 @@ namespace Jeomseon.Editor.Extensions
 {
     public static class ButtonExtensionsForVisualElement
     {
-
         /// <summary>
         /// .. backgroundColor변경시 마우스 이벤트로 인한 버튼 View 상호작용이 일어나지 않는 현상을 해결합니다
         /// </summary>
