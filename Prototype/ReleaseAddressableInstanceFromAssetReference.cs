@@ -8,7 +8,8 @@ namespace Jeomseon.Prototype
     {
         protected override void Release()
         {
-            PrototypeManager.Instance.ReleaseInstanceFromRuntimeKey(_primaryKey);
+            if (!string.IsNullOrEmpty(PrimaryKey))
+                PrototypeManager.ReleaseInstanceFromRuntimeKey(PrimaryKey);
         }
     }
 }

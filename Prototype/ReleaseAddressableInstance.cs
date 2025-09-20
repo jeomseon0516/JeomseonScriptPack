@@ -7,35 +7,29 @@ namespace Jeomseon.Prototype
     [DisallowMultipleComponent]
     internal class ReleaseAddressableInstance : MonoBehaviour
     {
-        protected string _primaryKey = null;
-
+        private string _primaryKey;
         internal virtual string PrimaryKey
         {
             get => _primaryKey;
             set
             {
-                if (_primaryKey is not null)
+                if (_primaryKey != null)
                 {
 #if DEBUG
                     Debug.LogWarning("ReleaseAddressableInstance : 키가 이미 할당되어 있습니다");
 #endif
                     return;
                 }
-
                 _primaryKey = value;
             }
         }
 
         protected virtual void Release()
         {
-            PrototypeManager.Instance.ReleaseInstance(_primaryKey);
+            if (!string.IsNullOrEmpty(_primaryKey))
+                PrototypeManager.ReleaseInstance(_primaryKey);
         }
 
-        private void OnDestroy()
-        {
-            if (_primaryKey is null || !gameObject.scene.isLoaded) return;
-
-            Release();
-        }
+        private void OnDestroy() => Release();
     }
 }

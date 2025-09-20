@@ -11,13 +11,21 @@ namespace Jeomseon.Prototype
         internal int RefCount { get; private set; }
 
         internal void UpCount() => RefCount++;
-        internal void DownCount() => RefCount--;
+
+        internal void DownCount()
+        {
+            if (RefCount > 0) RefCount--;
+            else
+            {
+#if DEBUG
+                Debug.LogWarning("RefCountingOperationHandle: RefCount already zero, extra Release?");
+#endif
+            }
+        }
 
         internal RefCountingOperationHandle(AsyncOperationHandle<T> handle)
         {
             Handle = handle;
         }
-
-        private RefCountingOperationHandle() { }
     }
 }
