@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using Jeomseon.Extensions;
+using UnityEngine.Serialization;
 
 namespace Jeomseon.UnityReactive
 {
@@ -13,17 +14,8 @@ namespace Jeomseon.UnityReactive
     public interface IReadOnlyReactiveField<T>
     {
         T Value { get; }
+        event UnityAction<T> ChangedEvent;
 
-        /// <summary>
-        /// .. 리스너를 추가시킵니다. 리스너 등록과 동시에 이벤트가 한번 호출됩니다
-        /// </summary>
-        /// <param name="onChangedValue"></param>
-        void AddListener(UnityAction<T> onChangedValue);
-        /// <summary>
-        /// .. 리스너를 제거합니다
-        /// </summary>
-        /// <param name="onChangedValue"></param>
-        void RemoveListener(UnityAction<T> onChangedValue);
         /// <summary>
         /// .. 리스너를 추가시 이벤트를 발생시키지 않습니다
         /// </summary>
@@ -68,7 +60,7 @@ namespace Jeomseon.UnityReactive
                 if (!EqualityComparer.Equals(_value, processedValue))
                 {
                     _value = processedValue;
-                    _onChangedValue.Invoke(_value);
+                    _changedEvent.Invoke(_value);
                 }
             }
         }
@@ -76,7 +68,7 @@ namespace Jeomseon.UnityReactive
         public override void SetValueAndForceInvoke(T value)
         {
             _value = GetProcessedValue(value);
-            _onChangedValue.Invoke(_value);
+            _changedEvent.Invoke(_value);
         }
 
         protected T GetProcessedValue(T value)
@@ -94,44 +86,39 @@ namespace Jeomseon.UnityReactive
     [System.Serializable]
     public abstract class ReactiveFieldBase<T> : IReactiveField<T>
     {
-        [SerializeField] protected UnityEvent<T> _onChangedValue = new();
+        [SerializeField, FormerlySerializedAs("_onChangedValue")] protected UnityEvent<T> _changedEvent = new();
+
+        /// <summary>
+        /// .. 리스너를 추가시킵니다. 리스너 등록과 동시에 이벤트가 한번 호출됩니다
+        /// </summary>
+        public event UnityAction<T> ChangedEvent
+        {
+            add { if (value is null) return; _changedEvent.AddListener(value); }
+            remove { if (value is null) return; _changedEvent.RemoveListener(value); }
+        }
 
         public abstract T Value { get; set; }
 
         public virtual void SetValueAndForceInvoke(T value)
         {
             Value = value;
-            _onChangedValue.Invoke(Value);
+            _changedEvent.Invoke(Value);
         }
 
-        public void AddListener(UnityAction<T> onChangedValue)
-        {
-            if (onChangedValue is null) return;
-
-            _onChangedValue.AddListener(onChangedValue);
-            onChangedValue.Invoke(Value);
-        }
-
-        public void RemoveListener(UnityAction<T> onChangedValue)
-        {
-            if (onChangedValue is null) return;
-
-            _onChangedValue.RemoveListener(onChangedValue);
-        }
 
         public void AddListenerWithoutNotify(UnityAction<T> onChangedValue)
         {
             if (onChangedValue is null) return;
 
-            _onChangedValue.AddListener(onChangedValue);
+            _changedEvent.AddListener(onChangedValue);
         }
 
-        public int GetPersistentEventCount() => _onChangedValue.GetPersistentEventCount();
-        public Object GetPersistentTarget(int index) => _onChangedValue.GetPersistentTarget(index);
-        public void SetPersistentListenerState(UnityEventCallState callState) => _onChangedValue.SetPersistentListenerState(callState);
-        public void SetPersistentListenerState(int index, UnityEventCallState callState) => _onChangedValue.SetPersistentListenerState(index, callState);
-        public void RemoveAllListener() => _onChangedValue.RemoveAllListeners();
-        public string GetPersistentMethodName(int index) => _onChangedValue.GetPersistentMethodName(index);
+        public int GetPersistentEventCount() => _changedEvent.GetPersistentEventCount();
+        public Object GetPersistentTarget(int index) => _changedEvent.GetPersistentTarget(index);
+        public void SetPersistentListenerState(UnityEventCallState callState) => _changedEvent.SetPersistentListenerState(callState);
+        public void SetPersistentListenerState(int index, UnityEventCallState callState) => _changedEvent.SetPersistentListenerState(index, callState);
+        public void RemoveAllListener() => _changedEvent.RemoveAllListeners();
+        public string GetPersistentMethodName(int index) => _changedEvent.GetPersistentMethodName(index);
         public override string ToString() => Value.ToString();
     }
 }

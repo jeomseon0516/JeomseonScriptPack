@@ -11,7 +11,33 @@ using UnityEngine.AI;
 namespace Jeomseon.UnityReactive
 {
     [Serializable]
-    public class ReactiveList<T>
+    public struct ChangedElementMessage<T>
+    {
+        public int Index { get; private set; }
+        public T PreviousElement { get; private set; }
+        public T NewElement { get; private set; }
+
+        public ChangedElementMessage(int index, T previousElement, T newElement)
+        {
+            Index = index;
+            PreviousElement = previousElement;
+            NewElement = newElement;
+        }
+    }
+
+    public interface IReadOnlyReactiveList<T>
+    {
+        T this[int index] { get; }
+
+        event UnityAction<T> AddedEvent;
+        event UnityAction<T> RemovedEvent;
+        event UnityAction<T[]> AddedRangeEvent;
+        event UnityAction<T[]> RemovedRangeEvent;
+        event UnityAction<ChangedElementMessage<T>> ChangedEvent;
+    }
+
+    [Serializable]
+    public class ReactiveList<T> : IReadOnlyReactiveList<T>
     {
         public enum RangeEventMode : byte
         {
@@ -23,21 +49,6 @@ namespace Jeomseon.UnityReactive
             /// .. OnAddedRange, OnRemovedRange에서 이벤트를 발행합니다.
             /// </summary>
             BATCHED
-        }
-
-        [Serializable]
-        public struct ChangedElementMessage
-        {
-            public int Index { get; private set; }
-            public T PreviousElement { get; private set; }
-            public T NewElement { get; private set; }
-
-            public ChangedElementMessage(int index, T previousElement, T newElement)
-            {
-                Index = index;
-                PreviousElement = previousElement;
-                NewElement = newElement;
-            }
         }
 
         [SerializeField] private List<T> _list = new();
@@ -54,36 +65,66 @@ namespace Jeomseon.UnityReactive
         /// .. 요소가 추가될때 이벤트를 발행합니다 RangeEventMode가 PER_ELEMENT일경우 Range 관련 메서드를 호출할 경우 해당 이벤트에서 메세지를 발행합니다. 
         /// BATCHED일 경우에는 Range 메서드를 호출해도 이벤트를 발행하지 않습니다.
         /// </summary>
-        [field: SerializeField] public UnityEvent<T> OnAddedElement { get; private set; } = new();
+        [SerializeField] private UnityEvent<T> _addedEvent = new();
         /// <summary>
         /// .. 요소가 추가될때 이벤트를 발행합니다 RangeEventMode가 PER_ELEMENT일경우 Range 관련 메서드를 호출할 경우 해당 이벤트에서 메세지를 발행합니다.  
         /// BATCHED일 경우에는 Range 메서드를 호출해도 이벤트를 발행하지 않습니다.
         /// </summary>
-        [field: SerializeField] public UnityEvent<T> OnRemovedElement { get; private set; } = new();
+        [SerializeField] private UnityEvent<T> _removedEvent = new();
         /// <summary>
         /// .. 리스트의 내부 요소가 다른 값으로 변경되었을 시 이벤트를 발행합니다. 
         /// </summary>
-        [field: SerializeField] public UnityEvent<ChangedElementMessage> OnChangedElement { get; private set; } = new();
+        [SerializeField] private UnityEvent<ChangedElementMessage<T>> _changedEvent = new();
 
         /// <summary>
         /// .. RangeEventMode가 BATCHED일때만 이벤트를 발행합니다.
         /// </summary>
-        [field: SerializeField] public UnityEvent<T[]> OnAddedRange { get; private set; } = new();
+        [SerializeField] private UnityEvent<T[]> _addedRangeEvent = new();
         /// <summary>
         /// .. RangeEventMode가 BATCHED일때만 이벤트를 발행합니다.
         /// </summary>
-        [field: SerializeField] public UnityEvent<T[]> OnRemovedRange { get; private set; } = new();
+        [SerializeField] private UnityEvent<T[]> _removedRangeEvent = new();
+
+        public event UnityAction<T> AddedEvent
+        {
+            add { if (value is null) return; _addedEvent.AddListener(value); }
+            remove { if (value is null) return; _addedEvent.RemoveListener(value); }
+        }
+
+        public event UnityAction<T> RemovedEvent
+        {
+            add { if (value is null) return; _removedEvent.AddListener(value); }
+            remove { if (value is null) return; _removedEvent.RemoveListener(value); }
+        }
+
+        public event UnityAction<T[]> AddedRangeEvent
+        {
+            add { if (value is null) return; _addedRangeEvent.AddListener(value); }
+            remove { if (value is null) return; _addedRangeEvent.RemoveListener(value); }
+        }
+
+        public event UnityAction<T[]> RemovedRangeEvent
+        {
+            add { if (value is null) return; _removedRangeEvent.AddListener(value); }
+            remove { if (value is null) return; _removedRangeEvent.RemoveListener(value); }
+        }
+
+        public event UnityAction<ChangedElementMessage<T>> ChangedEvent
+        {
+            add { if (value is null) return; _changedEvent.AddListener(value); }
+            remove { if (value is null) return; _changedEvent.RemoveListener(value); }
+        }
 
         /// <summary>
         /// .. RangeEventMode가 PER_ELEMENT일때는 Range관련 메서드를 호출할 시 OnAddedElement, OnRemovedElement에서 이벤트를 발행합니다.
         /// .. BATCHE 모드에서는 OnAddedRange, OnRemovedRange에서 이벤트를 발행합니다.
         /// </summary>
-        [field: SerializeField] public RangeEventMode RangeMode { get; set; } = RangeEventMode.PER_ELEMENT; 
+        [SerializeField] public RangeEventMode RangeMode { get; set; } = RangeEventMode.PER_ELEMENT;
 
         public void Add(T item)
         {
             _list.Add(item);
-            OnAddedElement.Invoke(item);
+            _addedEvent.Invoke(item);
         }
 
         public void AddRange(IEnumerable<T> collection)
@@ -95,18 +136,20 @@ namespace Jeomseon.UnityReactive
             switch(RangeMode)
             {
                 case RangeEventMode.PER_ELEMENT:
-                    collection.ForEach(OnAddedElement.Invoke);
+                    collection.ForEach(_addedEvent.Invoke);
                     break;
                 default:
-                    OnAddedRange.Invoke(collection as T[] ?? collection.ToArray());
+                    _addedRangeEvent.Invoke(collection as T[] ?? collection.ToArray());
                     break;
             }
         }
 
-        public void Remove(T item)
+        public bool Remove(T item)
         {
-            if (!_list.Remove(item)) return;
-            OnRemovedElement.Invoke(item);
+            if (!_list.Remove(item)) return false;
+            _removedEvent.Invoke(item);
+
+            return true;
         }
 
         public void RemoveAt(int index)
@@ -115,7 +158,7 @@ namespace Jeomseon.UnityReactive
 
             T item = _list[index];
             _list.RemoveAt(index);
-            OnRemovedElement.Invoke(item);
+            _removedEvent.Invoke(item);
         }
 
         public void RemoveRange(int index, int count)
@@ -132,10 +175,10 @@ namespace Jeomseon.UnityReactive
             switch (RangeMode)
             {
                 case RangeEventMode.PER_ELEMENT:
-                    items.ForEach(OnRemovedElement.Invoke);
+                    items.ForEach(_removedEvent.Invoke);
                     break;
                 default:
-                    OnRemovedRange.Invoke(items);
+                    _removedRangeEvent.Invoke(items);
                     break;
             }
         }
@@ -153,10 +196,10 @@ namespace Jeomseon.UnityReactive
                 switch (RangeMode)
                 {
                     case RangeEventMode.PER_ELEMENT:
-                        removedElements.ForEach(OnRemovedElement.Invoke);
+                        removedElements.ForEach(_removedEvent.Invoke);
                         break;
                     default:
-                        OnRemovedRange.Invoke(removedElements);
+                        _removedRangeEvent.Invoke(removedElements);
                         break;
                 }
             }
@@ -169,7 +212,7 @@ namespace Jeomseon.UnityReactive
             if (index > _list.Count || index < 0) return;
 
             _list.Insert(index, item);
-            OnAddedElement.Invoke(item);
+            _addedEvent.Invoke(item);
         }
 
         public void InsertRange(int index, IEnumerable<T> collection)
@@ -180,10 +223,10 @@ namespace Jeomseon.UnityReactive
             switch (RangeMode)
             {
                 case RangeEventMode.PER_ELEMENT:
-                    collection.ForEach(OnAddedElement.Invoke);
+                    collection.ForEach(_addedEvent.Invoke);
                     break;
                 default:
-                    OnAddedRange.Invoke(collection as T[] ?? collection.ToArray());
+                    _addedRangeEvent.Invoke(collection as T[] ?? collection.ToArray());
                     break;
             }
         }
@@ -198,10 +241,10 @@ namespace Jeomseon.UnityReactive
             switch (RangeMode)
             {
                 case RangeEventMode.PER_ELEMENT:
-                    items.ForEach(OnRemovedElement.Invoke);
+                    items.ForEach(_removedEvent.Invoke);
                     break;
                 default:
-                    OnRemovedRange.Invoke(items);
+                    _removedRangeEvent.Invoke(items);
                     break;
             }
         }
@@ -259,7 +302,7 @@ namespace Jeomseon.UnityReactive
                 T previousItem = _list[index];
                 _list[index] = value;
 
-                OnChangedElement.Invoke(new(index, previousItem, value));
+                _changedEvent.Invoke(new(index, previousItem, value));
             }
         }
     }
