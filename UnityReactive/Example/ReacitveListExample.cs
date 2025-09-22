@@ -63,7 +63,7 @@ public class ReacitveListExample : MonoBehaviour
         nums.ForEach(OnRemovedElement);
     }
 
-    public void OnChangedElement(ReactiveList<int>.ChangedElementMessage message)
+    public void OnChangedElement(ChangedElementMessage<int> message)
     {
         Debug.Log($"Index : {message.Index}");
         Debug.Log($"Previous : {message.PreviousElement}");

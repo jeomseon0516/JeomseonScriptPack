@@ -6,7 +6,6 @@ using System.Collections.ObjectModel;
 using UnityEngine;
 using UnityEngine.Events;
 using Jeomseon.Extensions;
-using UnityEngine.AI;
 
 namespace Jeomseon.UnityReactive
 {
