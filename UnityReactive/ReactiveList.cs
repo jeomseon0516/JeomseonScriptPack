@@ -27,6 +27,7 @@ namespace Jeomseon.UnityReactive
     public interface IReadOnlyReactiveList<T>
     {
         T this[int index] { get; }
+        RangeEventMode RangeMode { get; }
 
         event UnityAction<T> AddedEvent;
         event UnityAction<T> RemovedEvent;
@@ -35,21 +36,21 @@ namespace Jeomseon.UnityReactive
         event UnityAction<ChangedElementMessage<T>> ChangedEvent;
     }
 
+    public enum RangeEventMode : byte
+    {
+        /// <summary>
+        /// .. OnAddedElement, OnRemovedElement에서 이벤트를 발행합니다.
+        /// </summary>
+        PER_ELEMENT,
+        /// <summary>
+        /// .. OnAddedRange, OnRemovedRange에서 이벤트를 발행합니다.
+        /// </summary>
+        BATCHED
+    }
+
     [Serializable]
     public class ReactiveList<T> : IReadOnlyReactiveList<T>
     {
-        public enum RangeEventMode : byte
-        {
-            /// <summary>
-            /// .. OnAddedElement, OnRemovedElement에서 이벤트를 발행합니다.
-            /// </summary>
-            PER_ELEMENT,
-            /// <summary>
-            /// .. OnAddedRange, OnRemovedRange에서 이벤트를 발행합니다.
-            /// </summary>
-            BATCHED
-        }
-
         [SerializeField] private List<T> _list = new();
 
         public int Capacity
@@ -118,7 +119,7 @@ namespace Jeomseon.UnityReactive
         /// .. RangeEventMode가 PER_ELEMENT일때는 Range관련 메서드를 호출할 시 OnAddedElement, OnRemovedElement에서 이벤트를 발행합니다.
         /// .. BATCHE 모드에서는 OnAddedRange, OnRemovedRange에서 이벤트를 발행합니다.
         /// </summary>
-        [SerializeField] public RangeEventMode RangeMode { get; set; } = RangeEventMode.PER_ELEMENT;
+        [field: SerializeField] public RangeEventMode RangeMode { get; set; } = RangeEventMode.PER_ELEMENT;
 
         public void Add(T item)
         {

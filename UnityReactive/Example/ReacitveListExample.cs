@@ -31,7 +31,7 @@ public class ReacitveListExample : MonoBehaviour
         Numbers.RemoveRange(2, Numbers.Count - 2);
         Numbers.ForEach(num => Debug.Log(num));
 
-        Numbers.RangeMode = ReactiveList<int>.RangeEventMode.BATCHED;
+        Numbers.RangeMode = RangeEventMode.BATCHED;
 
         Numbers.AddRange(new int[] { 100, 101, 102, 103, 104 });
         Numbers.ForEach(num => Debug.Log(num));
