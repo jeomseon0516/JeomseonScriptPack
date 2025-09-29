@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Jeomseon.Extensions;
 using Jeomseon.UnityReactive;
+using System.Linq;
 
 public class ReacitveListExample : MonoBehaviour
 {
@@ -41,6 +42,17 @@ public class ReacitveListExample : MonoBehaviour
 
         Numbers.RemoveRange(2, Numbers.Count - 2);
         Numbers.ForEach(num => Debug.Log(num));
+
+        foreach (var num in Numbers)
+        {
+            Debug.Log(num);
+        }
+
+        int[] numArray = Numbers
+            .Where(n => n == 0)
+            .ToArray();
+
+        numArray.ForEach(n => Debug.Log(n));
     }
 
     public void OnAddedElement(int element)

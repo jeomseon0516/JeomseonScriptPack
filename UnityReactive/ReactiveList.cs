@@ -24,7 +24,7 @@ namespace Jeomseon.UnityReactive
         }
     }
 
-    public interface IReadOnlyReactiveList<T>
+    public interface IReadOnlyReactiveList<T> : IEnumerable<T>
     {
         T this[int index] { get; }
         RangeEventMode RangeMode { get; }
@@ -49,7 +49,7 @@ namespace Jeomseon.UnityReactive
     }
 
     [Serializable]
-    public class ReactiveList<T> : IReadOnlyReactiveList<T>
+    public class ReactiveList<T> : IReadOnlyReactiveList<T>, IEnumerable<T>
     {
         [SerializeField] private List<T> _list = new();
 
@@ -271,7 +271,6 @@ namespace Jeomseon.UnityReactive
         public int FindLastIndex(int startIndex, Predicate<T> match) => _list.FindLastIndex(startIndex, match);
         public int FindLastIndex(Predicate<T> match) => _list.FindLastIndex(match);
         public void ForEach(Action<T> action) => _list.ForEach(action);
-        public List<T>.Enumerator GetEnumerator() => _list.GetEnumerator();
         public List<T> GetRange(int index, int count) => _list.GetRange(index, count);
         public int IndexOf(T item, int index, int count) => _list.IndexOf(item, index, count);
         public int IndexOf(T item, int index) => _list.IndexOf(item, index);
@@ -287,6 +286,10 @@ namespace Jeomseon.UnityReactive
         public void Sort(IComparer<T> comparer) => _list.Sort(comparer);
         public void TrimExcess() => _list.TrimExcess();
         public bool TrueForAll(Predicate<T> match) => _list.TrueForAll(match);
+        public List<T>.Enumerator GetEnumerator() => _list.GetEnumerator();
+
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => _list.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
 
         public ReactiveList(IEnumerable<T> collection) => _list.AddRange(collection);
         public ReactiveList(int capacity) => _list.Capacity = capacity;
