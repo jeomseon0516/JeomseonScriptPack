@@ -1,8 +1,8 @@
 using Jeomseon.Extensions;
 using Jeomseon.UnityReactive;
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using UnityEditor.Presets;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -26,6 +26,7 @@ public class ReacitveListExample : MonoBehaviour
 
     private void Start()
     {
+        List<int> ints = new();
         Numbers.Add(0);
         Numbers.ForEach(num => Debug.Log(num));
         Numbers.Add(1);

@@ -11,7 +11,7 @@ namespace Jeomseon.UnityReactive
 {
     public delegate void ElementChangedHandler<in T>(int index, T previous, T current);
 
-    public interface IReadOnlyReactiveList<out T> : IEnumerable<T>
+    public interface IReadOnlyReactiveList<out T> : IEnumerable<T>, IEnumerable, IReadOnlyCollection<T>
     {
         T this[int index] { get; }
         RangeEventMode RangeMode { get; }
@@ -36,7 +36,7 @@ namespace Jeomseon.UnityReactive
     }
 
     [Serializable]
-    public class ReactiveList<T> : IReadOnlyReactiveList<T>, IEnumerable<T>
+    public class ReactiveList<T> : ICollection<T>, IReadOnlyReactiveList<T>, IEnumerable<T>, IEnumerable
     {
         [SerializeField] private List<T> _list = new();
 
@@ -107,6 +107,8 @@ namespace Jeomseon.UnityReactive
         /// .. BATCHE 모드에서는 OnAddedRange, OnRemovedRange에서 이벤트를 발행합니다.
         /// </summary>
         [field: SerializeField] public RangeEventMode RangeMode { get; set; } = RangeEventMode.PER_ELEMENT;
+
+        public bool IsReadOnly => false;
 
         public void Add(T item)
         {
