@@ -9,31 +9,18 @@ using Jeomseon.Extensions;
 
 namespace Jeomseon.UnityReactive
 {
-    [Serializable]
-    public struct ChangedElementMessage<T>
-    {
-        public int Index { get; private set; }
-        public T PreviousElement { get; private set; }
-        public T NewElement { get; private set; }
+    public delegate void ElementChangedHandler<in T>(int index, T previous, T current);
 
-        public ChangedElementMessage(int index, T previousElement, T newElement)
-        {
-            Index = index;
-            PreviousElement = previousElement;
-            NewElement = newElement;
-        }
-    }
-
-    public interface IReadOnlyReactiveList<T> : IEnumerable<T>
+    public interface IReadOnlyReactiveList<out T> : IEnumerable<T>
     {
         T this[int index] { get; }
         RangeEventMode RangeMode { get; }
 
-        event UnityAction<T> AddedEvent;
-        event UnityAction<T> RemovedEvent;
-        event UnityAction<T[]> AddedRangeEvent;
-        event UnityAction<T[]> RemovedRangeEvent;
-        event UnityAction<ChangedElementMessage<T>> ChangedEvent;
+        event Action<T> AddedEvent;
+        event Action<T> RemovedEvent;
+        event Action<T[]> AddedRangeEvent;
+        event Action<T[]> RemovedRangeEvent;
+        event ElementChangedHandler<T> ChangedEvent;
     }
 
     public enum RangeEventMode : byte
@@ -74,7 +61,7 @@ namespace Jeomseon.UnityReactive
         /// <summary>
         /// .. 리스트의 내부 요소가 다른 값으로 변경되었을 시 이벤트를 발행합니다. 
         /// </summary>
-        [SerializeField] private UnityEvent<ChangedElementMessage<T>> _changedEvent = new();
+        [SerializeField] private UnityEvent<int, T, T> _changedEvent = new();
 
         /// <summary>
         /// .. RangeEventMode가 BATCHED일때만 이벤트를 발행합니다.
@@ -85,34 +72,34 @@ namespace Jeomseon.UnityReactive
         /// </summary>
         [SerializeField] private UnityEvent<T[]> _removedRangeEvent = new();
 
-        public event UnityAction<T> AddedEvent
+        public event Action<T> AddedEvent
         {
-            add { if (value is null) return; _addedEvent.AddListener(value); }
-            remove { if (value is null) return; _addedEvent.RemoveListener(value); }
+            add { if (value is null) return; _addedEvent.AddListener((UnityAction<T>)Delegate.CreateDelegate(typeof(UnityAction<T>), value.Target, value.Method)); }
+            remove { if (value is null) return; _addedEvent.RemoveListener((UnityAction<T>)Delegate.CreateDelegate(typeof(UnityAction<T>), value.Target, value.Method)); }
         }
 
-        public event UnityAction<T> RemovedEvent
+        public event Action<T> RemovedEvent
         {
-            add { if (value is null) return; _removedEvent.AddListener(value); }
-            remove { if (value is null) return; _removedEvent.RemoveListener(value); }
+            add { if (value is null) return; _removedEvent.AddListener((UnityAction<T>)Delegate.CreateDelegate(typeof(UnityAction<T>), value.Target, value.Method)); }
+            remove { if (value is null) return; _removedEvent.RemoveListener((UnityAction<T>)Delegate.CreateDelegate(typeof(UnityAction<T>), value.Target, value.Method)); }
         }
 
-        public event UnityAction<T[]> AddedRangeEvent
+        public event Action<T[]> AddedRangeEvent
         {
-            add { if (value is null) return; _addedRangeEvent.AddListener(value); }
-            remove { if (value is null) return; _addedRangeEvent.RemoveListener(value); }
+            add { if (value is null) return; _addedRangeEvent.AddListener((UnityAction<T[]>)Delegate.CreateDelegate(typeof(UnityAction<T[]>), value.Target, value.Method)); }
+            remove { if (value is null) return; _addedRangeEvent.RemoveListener((UnityAction<T[]>)Delegate.CreateDelegate(typeof(UnityAction<T[]>), value.Target, value.Method)); }
         }
 
-        public event UnityAction<T[]> RemovedRangeEvent
+        public event Action<T[]> RemovedRangeEvent
         {
-            add { if (value is null) return; _removedRangeEvent.AddListener(value); }
-            remove { if (value is null) return; _removedRangeEvent.RemoveListener(value); }
+            add { if (value is null) return; _removedRangeEvent.AddListener((UnityAction<T[]>)Delegate.CreateDelegate(typeof(UnityAction<T[]>), value.Target, value.Method)); }
+            remove { if (value is null) return; _removedRangeEvent.RemoveListener((UnityAction<T[]>)Delegate.CreateDelegate(typeof(UnityAction<T[]>), value.Target, value.Method)); }
         }
 
-        public event UnityAction<ChangedElementMessage<T>> ChangedEvent
+        public event ElementChangedHandler<T> ChangedEvent
         {
-            add { if (value is null) return; _changedEvent.AddListener(value); }
-            remove { if (value is null) return; _changedEvent.RemoveListener(value); }
+            add { if (value is null) return; _changedEvent.AddListener((UnityAction<int, T, T>)Delegate.CreateDelegate(typeof(UnityAction<int, T, T>), value.Target, value.Method)); }
+            remove { if (value is null) return; _changedEvent.RemoveListener((UnityAction<int, T, T>)Delegate.CreateDelegate(typeof(UnityAction<int, T, T>), value.Target, value.Method)); }
         }
 
         /// <summary>
@@ -252,9 +239,9 @@ namespace Jeomseon.UnityReactive
         public List<T> ToList() => _list.ToList();
         public T[] ToArray() => _list.ToArray();
         public ReadOnlyCollection<T> AsReadOnly() => _list.AsReadOnly();
-        public void BinarySearch(int index, int count, T item, IComparer<T> comparer) => _list.BinarySearch(index, count, item, comparer);
-        public void BinarySearch(T item) => _list.BinarySearch(item);
-        public void BinarySearch(T item, IComparer<T> comparer) => _list.BinarySearch(item, comparer);
+        public int BinarySearch(int index, int count, T item, IComparer<T> comparer) => _list.BinarySearch(index, count, item, comparer);
+        public int BinarySearch(T item) => _list.BinarySearch(item);
+        public int BinarySearch(T item, IComparer<T> comparer) => _list.BinarySearch(item, comparer);
         public bool Contains(T item) => _list.Contains(item);
         public List<TOutput> ConvertAll<TOutput>(Converter<T, TOutput> converter) => _list.ConvertAll(converter);
         public void CopyTo(T[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
@@ -291,7 +278,7 @@ namespace Jeomseon.UnityReactive
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => _list.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
 
-        public ReactiveList(IEnumerable<T> collection) => _list.AddRange(collection);
+        public ReactiveList(IEnumerable<T> collection) => _list = new(collection);
         public ReactiveList(int capacity) => _list.Capacity = capacity;
         public ReactiveList() { }
 
@@ -305,7 +292,7 @@ namespace Jeomseon.UnityReactive
                 T previousItem = _list[index];
                 _list[index] = value;
 
-                _changedEvent.Invoke(new(index, previousItem, value));
+                _changedEvent.Invoke(index, previousItem, value);
             }
         }
     }

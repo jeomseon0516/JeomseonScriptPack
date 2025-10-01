@@ -1,13 +1,28 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using Jeomseon.Extensions;
 using Jeomseon.UnityReactive;
+using System;
 using System.Linq;
+using UnityEditor.Presets;
+using UnityEngine;
+using UnityEngine.Events;
+
+public interface IExampleInterface
+{ }
+
+[Serializable]
+public class ExampleInterface : IExampleInterface 
+{
+    public int count;
+}
 
 public class ReacitveListExample : MonoBehaviour
 {
     public ReactiveList<int> Numbers = new();
+    public ReactiveList<ExampleInterface> Example = new();
+
+    public UnityEvent<int> NumEvent = new();
+
+    public IReadOnlyReactiveList<IExampleInterface> PExample => Example;
 
     private void Start()
     {
@@ -53,6 +68,12 @@ public class ReacitveListExample : MonoBehaviour
             .ToArray();
 
         numArray.ForEach(n => Debug.Log(n));
+
+        Numbers[0] = 15;
+        Numbers.ChangedEvent -= OnChangedElement;
+        Numbers[0] = 10;
+
+        NumEvent.RemoveListener(OnAddedElement);
     }
 
     public void OnAddedElement(int element)
@@ -75,10 +96,10 @@ public class ReacitveListExample : MonoBehaviour
         nums.ForEach(OnRemovedElement);
     }
 
-    public void OnChangedElement(ChangedElementMessage<int> message)
+    public void OnChangedElement(int index, int prev, int now)
     {
-        Debug.Log($"Index : {message.Index}");
-        Debug.Log($"Previous : {message.PreviousElement}");
-        Debug.Log($"New : {message.NewElement}");
+        Debug.Log($"Index : {index}");
+        Debug.Log($"Previous : {prev}");
+        Debug.Log($"New : {now}");
     }
 }
