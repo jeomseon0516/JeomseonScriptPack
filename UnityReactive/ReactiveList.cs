@@ -1,8 +1,8 @@
 using System;
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -180,18 +180,39 @@ namespace Jeomseon.UnityReactive
         public List<T> ToList() => _list.ToList();
         public T[] ToArray() => _list.ToArray();
         public ReadOnlyCollection<T> AsReadOnly() => _list.AsReadOnly();
+        public int BinarySearch(int index, int count, T item, IComparer<T> comparer) => _list.BinarySearch(index, count, item, comparer);
+        public int BinarySearch(T item) => _list.BinarySearch(item);
+        public int BinarySearch(T item, IComparer<T> comparer) => _list.BinarySearch(item ,comparer);
         public bool Contains(T item) => _list.Contains(item);
+        public List<TOutput> ConvertAll<TOutput>(Converter<T, TOutput> converter) => _list.ConvertAll(converter);
+        public void CopyTo(T[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
+        public void CopyTo(T[] array) => _list.CopyTo(array);
+        public void CopyTo(int index, T[] array, int arrayIndex, int count) => _list.CopyTo(index, array, arrayIndex, count);
+        public bool Exist(Predicate<T> match) => _list.Exists(match);
+        public T Find(Predicate<T> match) => _list.Find(match);
+        public List<T> FindAll(Predicate<T> match) => _list.FindAll(match);
+        public int FindIndex(int startIndex, int count, Predicate<T> match) => _list.FindIndex(startIndex, count, match);
+        public int FindIndex(int startIndex, Predicate<T> match) => _list.FindIndex(startIndex, match);
+        public int FindIndex(Predicate<T> match) => _list.FindIndex(match);
         public void ForEach(Action<T> action) => _list.ForEach(action);
+        public List<T> GetRange(int index, int count) => _list.GetRange(index, count);
+        public int IndexOf(T item, int index, int count) => _list.IndexOf(item, index, count);
+        public int IndexOf(T item, int index) => _list.IndexOf(item, index);
         public int IndexOf(T item) => _list.IndexOf(item);
+        public int LastIndexOf(T item) => _list.LastIndexOf(item);
+        public int LastIndexOf(T item, int index) => _list.LastIndexOf(item, index);
+        public int LastIndexOf(T item, int index, int count) => _list.LastIndexOf(item, index, count);
+        public void Reverse(int index, int count, IComparer<T> comparer) => _list.Reverse(index, count);
+        public void Reverse() => _list.Reverse();
+        public void Sort(Comparison<T> comparison) => _list.Sort(comparison);
+        public void Sort(int index, int count, IComparer<T> comparer) => _list.Sort(index, count, comparer);
         public void Sort() => _list.Sort();
         public void Sort(IComparer<T> comparer) => _list.Sort(comparer);
-        public void Reverse() => _list.Reverse();
         public void TrimExcess() => _list.TrimExcess();
+        public bool TrueForAll(Predicate<T> match) => _list.TrueForAll(match);
         public List<T>.Enumerator GetEnumerator() => _list.GetEnumerator();
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => _list.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
-
-        public void CopyTo(T[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
 
         // »ý¼ºÀÚ
         public ReactiveList() { }
