@@ -62,6 +62,7 @@ namespace Jeomseon.ObjectPool
             
             genericComponent.gameObject.SetActive(false);
             genericComponent.transform.SetParent(getPoolParent().transform, false);
+            PoolInitializer.Initialize(genericComponent);
             
             _pool.Push(genericComponent);
         }
@@ -148,7 +149,8 @@ namespace Jeomseon.ObjectPool
             
             objectToReturn.SetActive(false);
             objectToReturn.transform.SetParent(getPoolParent().transform, false);
-            
+            PoolInitializer.Initialize(objectToReturn);
+
             stack.Push(objectToReturn);
         }
         
@@ -238,6 +240,8 @@ namespace Jeomseon.ObjectPool
             
             objectToReturn.gameObject.SetActive(false);
             objectToReturn.transform.SetParent(getPoolParent().transform, false);
+            PoolInitializer.Initialize(objectToReturn);
+
             stack.Push(objectToReturn);
         }
         
