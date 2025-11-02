@@ -1,0 +1,16 @@
+{
+    "name": "com.jeomseon.animation.editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:1921ee7125012874589b2ee7d32bf356"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
