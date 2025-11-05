@@ -1,47 +1,18 @@
-﻿using System;
+#if UNITY_5_3_OR_NEWER
+using System;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using UnityEngine;
 using UnityEngine.Events;
+using Jeomseon.Reactive; // 공통 인터페이스/델리게이트 참조
 
 namespace Jeomseon.UnityReactive
 {
-    public delegate void ElementChangedHandler<in T>(int index, T previous, T current);
-    public delegate void AddOrRemoveHandler<in T>(int[] indices, T[] items);
-
-    /// <summary>
-    /// .. 내부 값을 추가/제거/변경이 불가능하고 리스너 추가만 가능한 읽기전용 인터페이스입니다
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IReadOnlyReactiveList<out T> : IReadOnlyList<T>
-    {
-        /// <summary>
-        /// .. 값이 추가될때 발행되는 이벤트를 구독자에게 알림없이 리스너를 추가합니다
-        /// </summary>
-        /// <param name="onAddAction"> .. 리스너 메서드 </param>
-        void AddListenerToAddedEventWithoutNotify(AddOrRemoveHandler<T> onAddAction);
-        /// <summary>
-        /// .. 값이 추가 될때 발행되는 이벤트입니다 리스너 추가시 한번 이벤트를 발행합니다
-        /// </summary>
-        event AddOrRemoveHandler<T> AddedEvent;
-        /// <summary>
-        /// .. 값이 제거 될때 발행되는 이벤트입니다
-        /// </summary>
-        event AddOrRemoveHandler<T> RemovedEvent;
-        /// <summary>
-        /// .. 내부
-        /// </summary>
-        event ElementChangedHandler<T> ChangedEvent;
-        /// <summary>
-        /// .. 내부 값들의 순서가 재배치 될때 발행되는 이벤트입니다
-        /// </summary>
-        event Action<IReadOnlyList<T>> ReorderedEvent;
-    }
 
     [Serializable]
-    public class ReactiveList<T> : IList<T>, IReadOnlyReactiveList<T>
+    public class UnityReactiveList<T> : IList<T>, IReadOnlyReactiveList<T>
     {
         [SerializeField] private List<T> _list = new();
 
@@ -52,7 +23,7 @@ namespace Jeomseon.UnityReactive
 
         public event AddOrRemoveHandler<T> AddedEvent
         {
-            add 
+            add
             {
                 if (value == null) return;
 
@@ -261,8 +232,8 @@ namespace Jeomseon.UnityReactive
             }
         }
 
-        public void Reverse(int index, int count, IComparer<T> comparer) 
-        { 
+        public void Reverse(int index, int count, IComparer<T> comparer)
+        {
             _list.Reverse(index, count);
             _reorderedEvent.Invoke(_list);
         }
@@ -303,7 +274,7 @@ namespace Jeomseon.UnityReactive
         public ReadOnlyCollection<T> AsReadOnly() => _list.AsReadOnly();
         public int BinarySearch(int index, int count, T item, IComparer<T> comparer) => _list.BinarySearch(index, count, item, comparer);
         public int BinarySearch(T item) => _list.BinarySearch(item);
-        public int BinarySearch(T item, IComparer<T> comparer) => _list.BinarySearch(item ,comparer);
+        public int BinarySearch(T item, IComparer<T> comparer) => _list.BinarySearch(item, comparer);
         public bool Contains(T item) => _list.Contains(item);
         public List<TOutput> ConvertAll<TOutput>(Converter<T, TOutput> converter) => _list.ConvertAll(converter);
         public void CopyTo(T[] array, int arrayIndex) => _list.CopyTo(array, arrayIndex);
@@ -330,8 +301,9 @@ namespace Jeomseon.UnityReactive
         IEnumerator IEnumerable.GetEnumerator() => _list.GetEnumerator();
 
         // 생성자
-        public ReactiveList() { }
-        public ReactiveList(int capacity) => _list.Capacity = capacity;
-        public ReactiveList(IEnumerable<T> collection) => _list = new List<T>(collection);
+        public UnityReactiveList() { }
+        public UnityReactiveList(int capacity) => _list.Capacity = capacity;
+        public UnityReactiveList(IEnumerable<T> collection) => _list = new List<T>(collection);
     }
 }
+#endif

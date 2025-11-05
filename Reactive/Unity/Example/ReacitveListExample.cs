@@ -1,5 +1,6 @@
 using Jeomseon.Extensions;
 using Jeomseon.UnityReactive;
+using Jeomseon.Reactive;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,8 +18,8 @@ public class ExampleInterface : IExampleInterface
 
 public class ReacitveListExample : MonoBehaviour
 {
-    public ReactiveList<int> Numbers = new();
-    public ReactiveList<ExampleInterface> Example = new();
+    public UnityReactiveList<int> Numbers = new();
+    public UnityReactiveList<ExampleInterface> Example = new();
 
     public UnityEvent<int> NumEvent = new();
 
