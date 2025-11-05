@@ -19,7 +19,7 @@ namespace Jeomseon.Animation.Editor
         private bool _addDefaultEventIfNone = true;
         private float _defaultEventTimeNormalized = 1f; // 1 = 클립 끝
 
-        [MenuItem("Tools/Animation/Redirect Events To Receiver")]
+        [MenuItem("Jeomseon/Animation/Redirect Events To Receiver")]
         public static void Open()
         {
             var win = GetWindow<AnimationEventRedirector>("Redirect Anim Events");
