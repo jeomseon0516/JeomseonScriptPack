@@ -35,7 +35,7 @@ namespace Jeomseon.Singleton
             }
         }
 
-        protected void Awake()
+        protected internal void Awake()
         {
 #if UNITY_2020_1_OR_NEWER
             var instances = FindObjectsOfType<T>(true);
@@ -66,7 +66,7 @@ namespace Jeomseon.Singleton
             }
         }
 
-        private void OnDestroy()
+        protected virtual void OnDestroy()
         {
             // 현재 씬이 언로드되며 자신이 파괴될 때 새 씬에서 안전하게 재생성되도록 초기화
             if (ReferenceEquals(_instance, this))
