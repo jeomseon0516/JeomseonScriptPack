@@ -1,77 +1,85 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using Jeomseon.Extensions;
-using UnityEngine.SceneManagement;
 using UnityEngine;
 
 namespace Jeomseon.Singleton
 {
-    /// <summary>
-    /// .. SceneName이 일치하는 씬에서만 해당 싱글톤이 존재할 수 있도록 하는 제네릭 싱글톤 패턴입니다
-    /// 전역적인 접근이 가능합니다
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
     [DisallowMultipleComponent]
-    public abstract class SceneSingleton<T> : MonoBehaviour where T : SceneSingleton<T>
+    public abstract class SingletonScene<T> : MonoBehaviour where T : SingletonScene<T>
     {
-        private static T _instance = null;
+        private static T _instance;
+        private bool _initialized;
+
         public static T Instance
         {
             get
             {
-                if (!_instance)
+                if (_instance == null)
                 {
-                    _instance = FindObjectOfType<T>() ?? new GameObject(typeof(T).Name).AddComponent<T>();
-                    _instance.Init();
+#if UNITY_2020_1_OR_NEWER
+                    var found = FindObjectsOfType<T>(true);
+#else
+                    var found = Resources.FindObjectsOfTypeAll<T>();
+#endif
+                    if (found != null && found.Length > 0)
+                    {
+                        _instance = found[0];
+                        _instance.EnsureInitialized();
+                    }
+                    else
+                    {
+                        var go = new GameObject(typeof(T).Name);
+                        _instance = go.AddComponent<T>();
+                        _instance.EnsureInitialized();
+                    }
                 }
-
                 return _instance;
             }
         }
 
-        /// <summary>
-        /// .. 특정 씬에만 존재해야하는 싱글톤이므로 올바르지 않은 씬에서 생성될경우 Destroy
-        /// </summary>
-        protected abstract string SceneName { get; }
-
-        protected void Awake() // protected로 상속 클래스에서 재정의시 경고문 띄워주기
+        protected void Awake()
         {
-            if (SceneManager.GetActiveScene().name != SceneName)
+#if UNITY_2020_1_OR_NEWER
+            var instances = FindObjectsOfType<T>(true);
+#else
+            var instances = Resources.FindObjectsOfTypeAll<T>();
+#endif
+
+            if (_instance == null)
             {
-                Destroy(gameObject);
+                _instance = (T)this;
+                gameObject.name = typeof(T).Name;
+                EnsureInitialized();
+                // DontDestroyOnLoad 호출 안 함 → 씬 이동 시 같이 파괴
+            }
+            else if (_instance != this)
+            {
+                Destroy(this); // 중복 컴포넌트만 제거
                 return;
             }
 
-            T[] instances = FindObjectsOfType<T>(); // .. 씬에 미리 로드되어있는 경우
-
-            if (_instance is null)
+            if (instances != null && instances.Length > 1)
             {
-                _instance = instances[0];
-                _instance.name = typeof(T).ToString();
-                _instance.Init();
-            }
-
-            if (instances.Length > 1)
-            {
-                // .. 하이어라키에 여러개의 싱글톤 객체가 존재할 경우 모두 삭제 .. 같은 오브젝트에 여러개의 싱글톤 객체가 있을 경우 위험할 수 있음
-                instances
-                    .Where(instance => instance != _instance)
-                    .ForEach(instance => Destroy(instance.gameObject));
+                foreach (var inst in instances)
+                {
+                    if (inst == _instance) continue;
+                    Destroy(inst);
+                }
             }
         }
 
         private void OnDestroy()
         {
-            if (_instance != this) return;
-
-            _instance = null;
+            // 현재 씬이 언로드되며 자신이 파괴될 때 새 씬에서 안전하게 재생성되도록 초기화
+            if (ReferenceEquals(_instance, this))
+                _instance = null;
         }
 
-        /// <summary>
-        /// .. Awake 대체용 메서드
-        /// </summary>
+        private void EnsureInitialized()
+        {
+            if (_initialized) return;
+            _initialized = true;
+            Init();
+        }
+
         protected abstract void Init();
     }
 }
