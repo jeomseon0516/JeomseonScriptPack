@@ -1,11 +1,12 @@
-using Jeomseon.Extensions;
-using Jeomseon.UnityReactive;
-using Jeomseon.Reactive;
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using Jeomseon.Reactive;
+using Jeomseon.Attribute;
+using Jeomseon.Extensions;
+using Jeomseon.UnityReactive;
 
 public interface IExampleInterface
 { }
@@ -18,6 +19,7 @@ public class ExampleInterface : IExampleInterface
 
 public class ReacitveListExample : MonoBehaviour
 {
+    [SelectableSerializeField] public List<Animator> GameObjects = new();
     public UnityReactiveList<int> Numbers = new();
     public UnityReactiveList<ExampleInterface> Example = new();
 

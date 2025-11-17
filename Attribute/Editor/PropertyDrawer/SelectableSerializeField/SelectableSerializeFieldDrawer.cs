@@ -1,6 +1,5 @@
 #if UNITY_EDITOR
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -12,7 +11,6 @@ namespace Jeomseon.Attribute.Editor
 {
     using GUI = UnityEngine.GUI;
 
-    // .. TODO : 추후 컴포넌트 참조시 구조적 문제해결
     [CustomPropertyDrawer(typeof(SelectableSerializeFieldAttribute), true)]
     internal sealed class SelectableSerializeFieldDrawer : PropertyDrawer
     {
@@ -27,53 +25,76 @@ namespace Jeomseon.Attribute.Editor
                 IsMonoBehaviour = isMonoBehaviour;
             }
         }
-        
+
         private readonly TreeViewState _dropdownState = new();
-        private GUIContent _buttonContent = null;
-        private Type _listType = typeof(List<>);
-        private Type _arrayType = typeof(Array);
-        
-        private readonly Dictionary<SerializedProperty, SelectableFieldPropState> _cachedSelectableFieldPropStates = new();
+        private GUIContent _buttonContent;
+
+        // SerializedProperty 인스턴스는 매 프레임 바뀌니까 propertyPath 기준으로 캐싱
+        private readonly Dictionary<string, SelectableFieldPropState> _stateCache = new();
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             _buttonContent ??= new(EditorGUIUtility.IconContent("icon dropdown").image);
 
-            Type propertyType = fieldInfo.FieldType switch
+            // 이 Attribute는 MonoBehaviour 안에서만 유효
+            if (property.serializedObject.targetObject is not MonoBehaviour monoBehaviour)
             {
-                var type when type == _listType => type.GetGenericArguments()[0],
-                var type when type.IsArray => type.GetElementType(),
-                var type => type
-            };
-            
-            if (!_cachedSelectableFieldPropStates.TryGetValue(property, out SelectableFieldPropState state))
-            {
-                if (property.serializedObject.targetObject is MonoBehaviour monoBehaviour)
-                {
-                    ComponentDropdown dropdown = new(_dropdownState, monoBehaviour.gameObject, propertyType, go =>
-                    {
-                        if (fieldInfo.FieldType == typeof(GameObject))
-                        {
-                            property.objectReferenceValue = go;
-                        }
-                        else
-                        {
-                            property.objectReferenceValue = go.GetComponent(fieldInfo.FieldType);
-                        }
-
-                        property.serializedObject.ApplyModifiedProperties();
-                    });
-
-                    state = new(dropdown, true);
-                }
-                else
-                {
-                    state = new(null, false);
-                }
-                
-                _cachedSelectableFieldPropStates.Add(property, state);
+                EditorGUI.HelpBox(position, "SelectableSerializeField는 MonoBehaviour에서만 사용할 수 있습니다.", MessageType.Error);
+                return;
             }
-            
+
+            // 필드 타입 / 요소 타입 계산
+            Type fieldType = fieldInfo.FieldType;
+            bool isListType  = fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>);
+            bool isArrayType = fieldType.IsArray;
+
+            Type elementType = fieldType;
+            if (isListType)
+                elementType = fieldType.GetGenericArguments()[0];
+            else if (isArrayType)
+                elementType = fieldType.GetElementType();
+
+            // 실제로 선택/할당할 타입 (단일 필드면 fieldType, 리스트/배열이면 elementType)
+            Type referenceType = (isListType || isArrayType) ? elementType : fieldType;
+
+            // UnityEngine.Object 가 아니면 사용할 수 없음
+            if (!typeof(UnityEngine.Object).IsAssignableFrom(referenceType))
+            {
+                EditorGUI.HelpBox(position,
+                    "SelectableSerializeField는 UnityEngine.Object 타입(또는 그 List/Array)에만 사용할 수 있습니다.",
+                    MessageType.Error);
+                return;
+            }
+
+            // 요소/단일 모두 SerializedProperty는 ObjectReference 여야 한다
+            if (property.propertyType != SerializedPropertyType.ObjectReference)
+            {
+                EditorGUI.PropertyField(position, property, label, true);
+                return;
+            }
+
+            string key = property.propertyPath;
+
+            if (!_stateCache.TryGetValue(key, out var state))
+            {
+                var dropdown = new ComponentDropdown(_dropdownState, monoBehaviour.gameObject, referenceType, go =>
+                {
+                    if (referenceType == typeof(GameObject))
+                    {
+                        property.objectReferenceValue = go;
+                    }
+                    else
+                    {
+                        property.objectReferenceValue = go.GetComponent(referenceType);
+                    }
+
+                    property.serializedObject.ApplyModifiedProperties();
+                });
+
+                state = new SelectableFieldPropState(dropdown, true);
+                _stateCache[key] = state;
+            }
+
             if (!state.IsMonoBehaviour)
             {
                 EditorGUI.HelpBox(position, "this object is not MonoBehaviour!", MessageType.Error);
@@ -82,35 +103,24 @@ namespace Jeomseon.Attribute.Editor
 
             EditorGUI.BeginProperty(position, label, property);
 
-            Rect fieldRect = position;
-            GUIContent content = label;
+            // ┌──── label ────┬─ btn ─┬─────── object field ───────┐
+            Rect labelRect  = new(position.x, position.y, EditorGUIUtility.labelWidth, position.height);
+            Rect buttonRect = new(labelRect.xMax, position.y, 18f, position.height);
+            Rect fieldRect  = new(
+                buttonRect.xMax + 2f,
+                position.y,
+                position.width - (buttonRect.xMax - position.x),
+                position.height);
 
-            if (property.propertyType == SerializedPropertyType.ObjectReference)
+            EditorGUI.LabelField(labelRect, label);
+
+            if (GUI.Button(buttonRect, _buttonContent))
             {
-                Rect labelRect = new(position.x, position.y, EditorGUIUtility.labelWidth, position.height);
-                Rect buttonRect = new(labelRect.xMax, position.y, 18, position.height);
-
-                fieldRect = new(
-                    buttonRect.xMax + 2,
-                    position.y,
-                    position.width - (buttonRect.xMax - position.x),
-                    position.height);
-
-                content = GUIContent.none;
-                EditorGUI.LabelField(labelRect, label);
-
-                if (GUI.Button(buttonRect, _buttonContent))
-                {
-                    state.Dropdown.Show(buttonRect);
-                }
-            }
-            else
-            {
-                EditorGUI.LabelField(position, label.text, "Use SelectableComponent With Component or GameObject");
+                state.Dropdown.Show(buttonRect);
             }
 
             GUI.enabled = false;
-            EditorGUI.PropertyField(fieldRect, property, content);
+            EditorGUI.PropertyField(fieldRect, property, GUIContent.none, true);
             GUI.enabled = true;
 
             EditorGUI.EndProperty();
@@ -118,6 +128,7 @@ namespace Jeomseon.Attribute.Editor
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
+            // 요소/단일 모두 Unity 기본 높이를 그대로 사용
             return EditorGUI.GetPropertyHeight(property, label, true);
         }
     }
