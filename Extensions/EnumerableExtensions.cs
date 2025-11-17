@@ -27,5 +27,15 @@ namespace Jeomseon.Extensions
         {
             foreach (T element in source) action.Invoke(element);
         }
+
+        public static void ForEachSafe<T>(this IEnumerable<T> source, Action<T> action) where T : class
+        {
+            foreach (T element in source) if (element != null) action.Invoke(element);
+        }
+
+        public static void ForEachSafe<T>(this IEnumerable source, Action<T> action) where T : class
+        {
+            foreach (T element in source) if (element != null) action.Invoke(element);
+        }
     }
 }

@@ -60,6 +60,11 @@ namespace Jeomseon.Extensions
             for (int i = 0; i < source.Count; i++) action.Invoke(source[i]);
         }
 
+        public static void ForEachSafe<T>(this IList<T> source, Action<T> action) where T : class
+        {
+            for (int i = 0; i < source.Count; i++) if (source[i] != null) action.Invoke(source[i]);
+        }
+
         public static bool TryPop<T>(this IList<T> source, int index, out T result)
         {
             if (index < 0 || index >= source.Count)

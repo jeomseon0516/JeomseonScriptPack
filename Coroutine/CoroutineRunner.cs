@@ -7,7 +7,7 @@ namespace Jeomseon.Coroutine
 {
     using Coroutine = UnityEngine.Coroutine;
 
-    public sealed class CoroutineManager : Singleton<CoroutineManager>
+    public sealed class CoroutineRunner : Singleton<CoroutineRunner>
     {
         protected override void Init() {}
 
