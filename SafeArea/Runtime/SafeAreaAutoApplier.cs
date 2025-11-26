@@ -30,14 +30,21 @@ namespace Jeomseon.SafeArea
         {
             var uiCamera = EnsureUiCamera();
 
-            var canvases = Object.FindObjectsOfType<Canvas>(true);
+#if UNITY_2023_1_OR_NEWER
+            // 최신 버전: FindObjectsByType 사용
+            var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#else
+            // 구버전 호환 (2019.3+): FindObjectsOfType 사용
+            var canvases = Object.FindObjectsOfType<Canvas>(true); // includeInactive = true
+#endif
+
             foreach (var canvas in canvases)
             {
                 if (canvas == null)
                     continue;
 
-                // Skip canvases that explicitly ignore SafeArea camera.
-                if (canvas.CompareTag("IgnoreSafeAreaCamera"))
+                // 태그 미정의여도 예외 안 나게 string 비교 사용
+                if (canvas.gameObject.tag == "IgnoreSafeAreaCamera")
                     continue;
 
                 if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
@@ -66,7 +73,7 @@ namespace Jeomseon.SafeArea
             go.AddComponent<SafeAreaCamera>();
 
             cam.clearFlags = CameraClearFlags.Depth;
-            cam.cullingMask = LayerMask.GetMask("UI"); // assumes UI layer exists
+            cam.cullingMask = LayerMask.GetMask("UI"); // assumes "UI" layer exists
             cam.orthographic = true;
             cam.orthographicSize = 5;
             cam.nearClipPlane = 0.1f;
