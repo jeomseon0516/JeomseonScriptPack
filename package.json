@@ -9,10 +9,15 @@
     "com.unity.textmeshpro": "3.2.0-pre.10",
     "com.unity.addressables": "1.21.21",
     "com.unity.editorcoroutines": "1.0.1",
-    "com.unity.inputsystem": "1.7.0"
+    "com.unity.inputsystem": "1.7.0",
+    "com.unity.device-simulator.devices": "1.0.1"
   },
   "author": {
     "name": "jeomseon0516",
     "url": "https://github.com/jeomseon0516"
+  },
+  "keywords": [ "safearea", "ui", "notch" ],
+  "scripts": {
+    "postinstall": "add-define JEOMSEON_USE_DEVICE_SIMULATOR"
   }
 }
