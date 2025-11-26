@@ -8,12 +8,16 @@ namespace Jeomseon.SafeArea
     /// Static watcher for safe area / screen size changes.
     /// - 런타임: Application.onBeforeRender에서 자동 체크
     /// - 에디터: SafeAreaPreviewWindow 등에서 ForceUpdate()를 호출해 수동 트리거
+    /// 
+    /// 이 클래스는 카메라를 직접 건드리지 않고,
+    /// SafeAreaChanged 이벤트만 브로드캐스트한다.
+    /// 구독자는 SafeAreaRoot, SafeAreaPadding 등.
     /// </summary>
     public static class SafeAreaWatcher
     {
         /// <summary>
-        /// Invoked whenever the safe area (or screen size) changes.
-        /// Rect 인자는 새 SafeArea 값.
+        /// SafeArea 또는 화면 크기가 변경되었을 때 호출되는 이벤트.
+        /// Rect 인자는 새 SafeArea 값(Screen 좌표 기준, px).
         /// </summary>
         public static event Action<Rect> SafeAreaChanged;
 
@@ -46,9 +50,12 @@ namespace Jeomseon.SafeArea
             _lastSafeArea = SafeAreaUtility.GetSafeArea();
             _lastScreenSize = SafeAreaUtility.GetScreenSize();
 
-            // 런타임에서 매 프레임 호출되는 훅
+            // 런타임에서 매 프레임 직전에 호출되는 훅
             Application.onBeforeRender -= CheckForChanges;
             Application.onBeforeRender += CheckForChanges;
+
+            // 초기 상태도 한 번 브로드캐스트 해주고 싶다면 아래 주석 해제
+            // SafeAreaChanged?.Invoke(_lastSafeArea);
         }
 
         private static void CheckForChanges()
@@ -60,7 +67,8 @@ namespace Jeomseon.SafeArea
             {
                 _lastSafeArea = safe;
                 _lastScreenSize = size;
-                SafeAreaChanged?.Invoke(safe);
+
+                SafeAreaChanged?.Invoke(_lastSafeArea);
             }
         }
 

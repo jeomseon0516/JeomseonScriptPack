@@ -3,10 +3,11 @@ using UnityEngine;
 namespace Jeomseon.SafeArea
 {
     /// <summary>
-    /// Applies safe area to the attached RectTransform by adjusting anchors/offsets.
-    /// You can choose which edges (left/right/top/bottom) should respect the safe area.
-    /// This is an alternative to camera-based SafeArea, useful for specific UI panels.
+    /// RectTransform을 Safe Area에 맞게 자동으로 맞춰주는 컴포넌트.
+    /// - 에디터/런타임 모두 동작(ExecuteAlways)
+    /// - SafeAreaWatcher.SafeAreaChanged 이벤트를 구독해서 갱신
     /// </summary>
+    [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(RectTransform))]
     public sealed class SafeAreaRoot : MonoBehaviour
@@ -25,14 +26,31 @@ namespace Jeomseon.SafeArea
 
         private void OnEnable()
         {
+            // 에디터/런타임 공통으로 구독
             SafeAreaWatcher.SafeAreaChanged += OnSafeAreaChanged;
-            OnSafeAreaChanged(SafeAreaUtility.GetSafeArea());
+
+            // 현재 SafeArea 기준으로 한 번 즉시 적용
+            ApplySafeArea(SafeAreaUtility.GetSafeArea());
         }
 
         private void OnDisable()
         {
             SafeAreaWatcher.SafeAreaChanged -= OnSafeAreaChanged;
         }
+
+#if UNITY_EDITOR
+        // 인스펙터에서 값 바꿀 때도 바로 반영되도록
+        private void OnValidate()
+        {
+            if (!isActiveAndEnabled)
+                return;
+
+            if (_rectTransform == null)
+                _rectTransform = GetComponent<RectTransform>();
+
+            ApplySafeArea(SafeAreaUtility.GetSafeArea());
+        }
+#endif
 
         private void OnSafeAreaChanged(Rect safeArea)
         {
@@ -41,10 +59,14 @@ namespace Jeomseon.SafeArea
 
         private void ApplySafeArea(Rect safeArea)
         {
-            Vector2 screenSize = SafeAreaUtility.GetScreenSize();
-            SafeAreaUtility.GetInsets(safeArea, screenSize, out float left, out float right, out float top, out float bottom);
+            if (_rectTransform == null)
+                _rectTransform = GetComponent<RectTransform>();
 
-            // Start with full-screen rect
+            Vector2 screenSize = SafeAreaUtility.GetScreenSize();
+            SafeAreaUtility.GetInsets(safeArea, screenSize,
+                out float left, out float right, out float top, out float bottom);
+
+            // 화면 전체 기준
             float xMin = 0f;
             float xMax = screenSize.x;
             float yMin = 0f;

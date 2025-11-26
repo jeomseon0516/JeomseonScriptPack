@@ -12,7 +12,7 @@ namespace Jeomseon.SafeAreaEditor
     ///
     /// Works on all Unity versions without Device Simulator API 의존.
     /// Device Simulator를 쓰는 경우, Simulator에서 기기 선택 후
-    /// "Use Current Screen.safeArea" 버튼만 눌러주면 됨.
+    /// GameView를 해당 기기로 띄우고 여기서 'Use Current Screen.safeArea' 버튼을 누르면 된다.
     /// </summary>
     public class SafeAreaPreviewWindow : EditorWindow
     {
@@ -32,7 +32,7 @@ namespace Jeomseon.SafeAreaEditor
             _overrideEnabled = SafeAreaUtility.EditorOverrideEnabled;
             _safeAreaRect = SafeAreaUtility.EditorSafeArea;
 
-            // 기본값이 비어있으면 현재 Screen 값으로 초기화
+            // 오버라이드 값이 비어있으면 현재 Screen 값으로 초기화
             if (_safeAreaRect.width <= 0f || _safeAreaRect.height <= 0f)
             {
                 _screenSize = new Vector2(Screen.width, Screen.height);
@@ -72,7 +72,8 @@ namespace Jeomseon.SafeAreaEditor
                 "It is ignored in player builds.\n\n" +
                 "- Device Simulator 사용 시:\n" +
                 "  1) Device Simulator 창에서 기기 선택\n" +
-                "  2) 여기서 'Use Current Screen.safeArea' 버튼 클릭",
+                "  2) GameView가 해당 기기를 보여주는 상태에서\n" +
+                "  3) 여기서 'Use Current Screen.safeArea' 버튼 클릭",
                 MessageType.None);
         }
 
@@ -86,10 +87,14 @@ namespace Jeomseon.SafeAreaEditor
 
             using (new EditorGUILayout.VerticalScope("box"))
             {
-                EditorGUILayout.LabelField($"Screen.width  : {Screen.width}");
-                EditorGUILayout.LabelField($"Screen.height : {Screen.height}");
+                EditorGUILayout.LabelField($"Screen.width      : {Screen.width}");
+                EditorGUILayout.LabelField($"Screen.height     : {Screen.height}");
                 var sa = Screen.safeArea;
-                EditorGUILayout.LabelField($"Screen.safeArea : x={sa.x}, y={sa.y}, w={sa.width}, h={sa.height}");
+                EditorGUILayout.LabelField($"Screen.safeArea   : x={sa.x}, y={sa.y}, w={sa.width}, h={sa.height}");
+
+                // Utility 관점에서의 SafeArea도 참고용으로 출력
+                var utilSa = SafeAreaUtility.GetSafeArea();
+                EditorGUILayout.LabelField($"Utility SafeArea  : x={utilSa.x}, y={utilSa.y}, w={utilSa.width}, h={utilSa.height}");
 
                 EditorGUILayout.Space();
 
@@ -105,12 +110,18 @@ namespace Jeomseon.SafeAreaEditor
 
         private void ApplyOverrideToRuntime()
         {
+            // 1) 에디터용 SafeArea 오버라이드 설정
             SafeAreaUtility.EditorOverrideEnabled = _overrideEnabled;
             SafeAreaUtility.EditorSafeArea = _safeAreaRect;
 
-            // ⭐ 이제는 Instance 필요 없이 바로 static ForceUpdate 호출
+            // 2) 에디터에서도 SafeAreaRoot가 존재하도록 강제 적용
+            //    (Canvas들을 감싸고 SafeAreaRoot 컴포넌트 부착)
+            SafeAreaAutoApplier.ApplyToAllCanvases();
+
+            // 3) 현재 SafeArea 상태를 모든 구독자(SafeAreaRoot, SafeAreaPadding 등)에 브로드캐스트
             SafeAreaWatcher.ForceUpdate();
 
+            // 4) 씬 뷰 / 게임 뷰 갱신
             SceneView.RepaintAll();
         }
     }
