@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !UNITY_6000_0_OR_NEWER
 using System;
 using System.Linq;
 using System.Collections;
@@ -28,32 +28,35 @@ namespace Jeomseon.Attribute.Editor
     [InitializeOnLoad]
     internal static class InspectorWindowModifier
     {
-        static InspectorWindowModifier()
-        {
-            initialize();
-        }
-
+        // target InstanceID -> drawer list
         private static readonly Dictionary<string, List<IObjectEditorAttributeDrawer>> _attributeDrawers = new();
         private static bool _isDelay = false;
 
-        private static void initialize() 
+        static InspectorWindowModifier()
+        {
+            Initialize();
+        }
+
+        private static void Initialize()
         {
             Debug.Log("Modify Inspector!");
-            
-            EditorCoroutineUtility.StartCoroutineOwnerless(runModifier());
 
-            static IEnumerator runModifier()
+            EditorCoroutineUtility.StartCoroutineOwnerless(RunModifier());
+
+            static IEnumerator RunModifier()
             {
+                // 한 프레임 늦게 실행해서 Inspector가 완전히 만들어진 뒤에 후킹
                 yield return null;
-                modifyInspector();
+                ModifyInspector();
             }
         }
 
-        private static void modifyInspector()
+        private static void ModifyInspector()
         {
             // InspectorWindow 타입을 얻어옴
             Type inspectorWindowType = typeof(Editor).Assembly.GetType("UnityEditor.InspectorWindow");
-            if (inspectorWindowType == null) return;
+            if (inspectorWindowType == null)
+                return;
 
             // 모든 InspectorWindow 인스턴스를 얻어옴
             IEnumerable<EditorWindow> inspectors = Resources
@@ -62,19 +65,20 @@ namespace Jeomseon.Attribute.Editor
 
             foreach (EditorWindow inspector in inspectors)
             {
-                // rootVisualElement를 리플렉션으로 가져옴 (2022.3.29f1) 기준 인스펙터 에디터 VisualElement는 editorsElement 프로퍼티
-                PropertyInfo rootVisualElementProperty = inspectorWindowType.GetProperty("editorsElement", BindingFlags.NonPublic | BindingFlags.Instance);
+                // 내부 비공개 editorsElement 대신, 공식 rootVisualElement 사용
+                VisualElement rootVisualElement = inspector.rootVisualElement;
+                if (rootVisualElement == null)
+                    continue;
 
-                if (rootVisualElementProperty?.GetValue(inspector) is VisualElement rootVisualElement)
-                {
-                    rootVisualElement.RegisterCallback<GeometryChangedEvent>(_ =>
-                       callCustomDrawerMethods(rootVisualElement));
+                rootVisualElement.RegisterCallback<GeometryChangedEvent>(_ =>
+                    CallCustomDrawerMethods(rootVisualElement));
 
-                    callCustomDrawerMethods(rootVisualElement);
-                }
+                // 최초 1회 즉시 호출
+                CallCustomDrawerMethods(rootVisualElement);
             }
 
-            static IEnumerator iETrackSelectionChanged(VisualElement visualElement)
+            // 선택 변경 시 강제로 리빌드하는 용도로 쓰던 것으로 보이는 코드 (현재는 사용 안 함)
+            static IEnumerator IETrackSelectionChanged(VisualElement visualElement)
             {
                 Object selectedObject = null;
                 Type scriptableObjectType = typeof(ScriptableObject);
@@ -82,72 +86,108 @@ namespace Jeomseon.Attribute.Editor
                 while (true)
                 {
                     Object o = selectedObject;
-                    yield return new WaitUntil(() => o != Selection.activeObject &&
-                                                     Selection.activeObject != null &&
-                                                     Selection.activeObject.GetType().IsSubclassOf(scriptableObjectType));
+
+                    yield return new WaitUntil(() =>
+                        o != Selection.activeObject &&
+                        Selection.activeObject != null &&
+                        Selection.activeObject.GetType().IsSubclassOf(scriptableObjectType));
 
                     selectedObject = Selection.activeObject;
                     float originalWidth = visualElement.resolvedStyle.width;
-                    setVisualElementWidth(visualElement, originalWidth + 1);
-                    EditorCoroutineUtility.StartCoroutineOwnerless(setOriginalWidth(visualElement, originalWidth));
+                    SetVisualElementWidth(visualElement, originalWidth + 1);
+                    EditorCoroutineUtility.StartCoroutineOwnerless(SetOriginalWidth(visualElement, originalWidth));
                 }
 
-                static IEnumerator setOriginalWidth(VisualElement visualElement, float originalWidth)
+                static IEnumerator SetOriginalWidth(VisualElement visualElement, float originalWidth)
                 {
                     yield return null;
-                    setVisualElementWidth(visualElement, originalWidth);
+                    SetVisualElementWidth(visualElement, originalWidth);
                 }
 
-                static void setVisualElementWidth(VisualElement visualElement, float width)
+                static void SetVisualElementWidth(VisualElement visualElement, float width)
                 {
                     visualElement.style.width = width;
-                    Debug.Log(visualElement.style.alignSelf = Align.Auto);
+                    visualElement.style.alignSelf = Align.Auto;
+
+                    // alignSelf에 값을 대입하면서 로그 찍던, 수상한 부분 수정
+                    Debug.Log($"Inspector root width adjusted to {width}.");
                 }
             }
         }
 
-        private static void callCustomDrawerMethods(VisualElement root)
+        private static void CallCustomDrawerMethods(VisualElement root)
         {
-            if (_isDelay) return;
+            // 한 프레임에 너무 자주 호출되는 것 방지
+            if (_isDelay)
+                return;
 
             _isDelay = true;
-            EditorCoroutineUtility.StartCoroutineOwnerless(iEWaitSetIsDelayToFalse());
-            List<VisualElement> editorElements = root.Query<VisualElement>(null, "unity-inspector-element").ToList(); // .. 인스펙터 엘리먼트 쿼리로 검색
+            EditorCoroutineUtility.StartCoroutineOwnerless(IEWaitSetIsDelayToFalse());
+
+            // .. 인스펙터 엘리먼트 쿼리로 검색
+            List<VisualElement> editorElements =
+                root.Query<VisualElement>(null, "unity-inspector-element").ToList();
 
             foreach (VisualElement editorElement in editorElements)
             {
-                if (editorElement.Q<IMGUIContainer>("onw-custom-attribute-drawer") != null) continue; // .. 중첩 방지 안해두면 2번이상호출된후 무한 호출반복 
+                // 이미 우리 컨테이너가 붙어 있으면 중복 추가 방지
+                IMGUIContainer existingContainer =
+                    editorElement.Q<IMGUIContainer>("onw-custom-attribute-drawer");
 
-                // .. (2022.3.29f1) 기준 editor 프로퍼티
-                PropertyInfo editorProperty = editorElement
-                    .GetType()
-                    .GetProperty("editor", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (existingContainer != null)
+                    continue;
 
-                if (editorProperty?.GetValue(editorElement) is Editor editor && // .. 에디터 찾아오기
-                    editor.target is MonoBehaviour or ScriptableObject)        // .. 타겟이 모노비하이비어거나 스크립터블 오브젝트 일 경우
+                Editor editor = null;
+
+                // Unity 버전에 따라 내부 구현이 달라질 수 있으므로 방어적 리플렉션
+                try
                 {
-                    IMGUIContainer iMGUIContainer = editorElement.Q<IMGUIContainer>("onw-custom-attribute-drawer");
+                    PropertyInfo editorProperty = editorElement
+                        .GetType()
+                        .GetProperty("editor", BindingFlags.NonPublic | BindingFlags.Instance);
 
-                    // .. Editor마다 드로어 인스턴스 생성 적용되는 오브젝트마다 처리되는 데이터의 양이 다를 수 있으므로
-                    if (!_attributeDrawers.TryGetValue(editor.target.GetInstanceID().ToString(), out List<IObjectEditorAttributeDrawer> drawers))
-                    {
-                        drawers = new(ReflectionHelper.CreateChildClassesFromType<IObjectEditorAttributeDrawer>()); // .. 드로어를 상속받는 클래스들의 인스턴스 생성 후 반환
-                        _attributeDrawers.Add(editor.target.GetInstanceID().ToString(), drawers); // .. 추가
-                        drawers.ForEach(drawer => drawer.OnEnable(editor)); // .. Enable 호출 사실상 Awake와 같다
-                    }
-
-                    if (iMGUIContainer is null)
-                    {
-                        iMGUIContainer = new(() => drawers.ForEach(drawer => drawer.OnInspectorGUI(editor)))
-                        {
-                            name = "onw-custom-attribute-drawer" // .. 컨테이너에 중첩방지용 이름 부여
-                        };
-                        editorElement.Add(iMGUIContainer);
-                    }
+                    if (editorProperty != null)
+                        editor = editorProperty.GetValue(editorElement) as Editor;
                 }
+                catch (Exception ex)
+                {
+                    // 전체 에디터를 죽이지 않도록 한 번만 로그 찍는 식으로 관리해도 좋음
+                    Debug.LogException(ex);
+                }
+
+                if (editor == null)
+                    continue;
+
+                // .. 타겟이 모노비하이비어거나 스크립터블 오브젝트 일 경우만 처리
+                if (editor.target is not (MonoBehaviour or ScriptableObject))
+                    continue;
+
+                string key = editor.target.GetInstanceID().ToString();
+
+                // Editor마다 드로어 인스턴스 생성
+                if (!_attributeDrawers.TryGetValue(key, out List<IObjectEditorAttributeDrawer> drawers))
+                {
+                    drawers = new List<IObjectEditorAttributeDrawer>(
+                        ReflectionHelper.CreateChildClassesFromType<IObjectEditorAttributeDrawer>());
+
+                    _attributeDrawers.Add(key, drawers);
+
+                    // 사실상 Awake 개념
+                    drawers.ForEach(drawer => drawer.OnEnable(editor));
+                }
+
+                // 실제로 IMGUI 컨테이너를 추가
+                IMGUIContainer drawerContainer = new IMGUIContainer(
+                    () => drawers.ForEach(drawer => drawer.OnInspectorGUI(editor)))
+                {
+                    // 중복 방지를 위한 이름
+                    name = "onw-custom-attribute-drawer"
+                };
+
+                editorElement.Add(drawerContainer);
             }
 
-            static IEnumerator iEWaitSetIsDelayToFalse()
+            static IEnumerator IEWaitSetIsDelayToFalse()
             {
                 yield return null;
                 _isDelay = false;

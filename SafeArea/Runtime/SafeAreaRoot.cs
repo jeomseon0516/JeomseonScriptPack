@@ -4,10 +4,9 @@ namespace Jeomseon.SafeArea
 {
     /// <summary>
     /// RectTransform을 Safe Area에 맞게 자동으로 맞춰주는 컴포넌트.
-    /// - 에디터/런타임 모두 동작(ExecuteAlways)
-    /// - SafeAreaWatcher.SafeAreaChanged 이벤트를 구독해서 갱신
+    /// - 런타임: SafeAreaWatcher.SafeAreaChanged 이벤트를 구독해서 갱신
+    /// - 에디터/프리뷰: Preview에서 직접 ApplyPreview 호출
     /// </summary>
-    [ExecuteAlways]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(RectTransform))]
     public sealed class SafeAreaRoot : MonoBehaviour
@@ -26,10 +25,9 @@ namespace Jeomseon.SafeArea
 
         private void OnEnable()
         {
-            // 에디터/런타임 공통으로 구독
             SafeAreaWatcher.SafeAreaChanged += OnSafeAreaChanged;
 
-            // 현재 SafeArea 기준으로 한 번 즉시 적용
+            // 현재 SafeArea 기준으로 한 번 즉시 적용 (런타임 기준)
             ApplySafeArea(SafeAreaUtility.GetSafeArea());
         }
 
@@ -38,35 +36,65 @@ namespace Jeomseon.SafeArea
             SafeAreaWatcher.SafeAreaChanged -= OnSafeAreaChanged;
         }
 
-#if UNITY_EDITOR
-        //// 인스펙터에서 값 바꿀 때도 바로 반영되도록
-        //private void OnValidate()
-        //{
-        //    if (!isActiveAndEnabled)
-        //        return;
-
-        //    if (_rectTransform == null)
-        //        _rectTransform = GetComponent<RectTransform>();
-
-        //    ApplySafeArea(SafeAreaUtility.GetSafeArea());
-        //}
-#endif
-
         private void OnSafeAreaChanged(Rect safeArea)
         {
-            // ApplySafeArea(safeArea);
+            ApplySafeArea(safeArea);
         }
 
+        /// <summary>
+        /// 런타임/일반용: SafeAreaUtility의 ScreenSize 기준으로 적용.
+        /// </summary>
         private void ApplySafeArea(Rect safeArea)
         {
             if (_rectTransform == null)
                 _rectTransform = GetComponent<RectTransform>();
 
             Vector2 screenSize = SafeAreaUtility.GetScreenSize();
+
+#if UNITY_EDITOR
+            // 에디터에서 GameView가 없어서 0,0일 수 있는 상황 방어
+            if (screenSize.x <= 0f || screenSize.y <= 0f)
+            {
+                var canvas = _rectTransform.GetComponentInParent<Canvas>();
+                if (canvas != null)
+                {
+                    var rect = canvas.pixelRect;
+                    if (rect.width > 0f && rect.height > 0f)
+                    {
+                        screenSize = rect.size;
+                    }
+                }
+            }
+#endif
+
+            if (screenSize.x <= 0f || screenSize.y <= 0f)
+                return;
+
+            ApplyInternal(safeArea, screenSize);
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// 에디터 PreviewScene 전용: 외부에서 safeArea + screenSize를 직접 지정해서 적용.
+        /// 원본 씬의 SafeAreaUtility / Watcher와는 무관하게 동작.
+        /// </summary>
+        internal void ApplyPreview(Rect safeArea, Vector2 screenSize)
+        {
+            if (screenSize.x <= 0f || screenSize.y <= 0f)
+                return;
+
+            if (_rectTransform == null)
+                _rectTransform = GetComponent<RectTransform>();
+
+            ApplyInternal(safeArea, screenSize);
+        }
+#endif
+
+        private void ApplyInternal(Rect safeArea, Vector2 screenSize)
+        {
             SafeAreaUtility.GetInsets(safeArea, screenSize,
                 out float left, out float right, out float top, out float bottom);
 
-            // 화면 전체 기준
             float xMin = 0f;
             float xMax = screenSize.x;
             float yMin = 0f;
