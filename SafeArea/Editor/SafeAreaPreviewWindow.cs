@@ -62,7 +62,7 @@ namespace Jeomseon.SafeAreaEditor
             // Override 끈 상태일 때는 GameView 시뮬레이터 변화에 따라 자동 갱신
             if (!_overrideEnabled)
             {
-                Vector2 currentScreenSize = new Vector2(Screen.width, Screen.height);
+                Vector2 currentScreenSize = new(Screen.width, Screen.height);
                 Rect currentSafeArea = Screen.safeArea;
 
                 bool screenSizeChanged = Vector2.Distance(currentScreenSize, _lastScreenSize) > 0.1f;
@@ -238,7 +238,7 @@ namespace Jeomseon.SafeAreaEditor
 
             var camGO = new GameObject("SafeAreaPreviewCamera");
             _previewCamera = camGO.AddComponent<Camera>();
-            _previewCamera.clearFlags = CameraClearFlags.SolidColor;
+            _previewCamera.clearFlags = CameraClearFlags.Skybox;
             _previewCamera.backgroundColor = Color.gray;
             _previewCamera.orthographic = true;
             _previewCamera.nearClipPlane = 0.1f;
