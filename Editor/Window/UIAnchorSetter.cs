@@ -26,11 +26,21 @@ namespace Jeomseon.Editor.Window
 
             if (_selectedUI && GUILayout.Button("Set Anchors for Child"))
             {
-                foreach (RectTransform rectTransform in _selectedUI.GetComponentsInChildren<RectTransform>(true)
-                    .Where(rt => !rt.GetComponent<Canvas>() && (!rt.parent || !rt.parent.GetComponent<LayoutGroup>())))
+                var rects = _selectedUI
+                    .GetComponentsInChildren<RectTransform>(true)
+                    .Where(rt =>
+                        !rt.GetComponent<Canvas>() &&
+                        (!rt.parent || !rt.parent.GetComponent<LayoutGroup>())
+                    )
+                    .ToArray();
+
+                // 🔥 Undo 시작
+                Undo.RecordObjects(rects, "Set UI Anchors");
+
+                foreach (RectTransform rectTransform in rects)
                 {
-                    RectTransform parent = (rectTransform.parent as RectTransform)!;
-                    if (!parent) return;
+                    RectTransform parent = rectTransform.parent as RectTransform;
+                    if (!parent) continue;
 
                     Vector2 newAnchorMin = new(
                         rectTransform.anchorMin.x + rectTransform.offsetMin.x / parent.rect.width,
@@ -44,7 +54,8 @@ namespace Jeomseon.Editor.Window
                     rectTransform.anchorMax = newAnchorMax;
                     rectTransform.offsetMin = rectTransform.offsetMax = Vector2.zero;
                 }
-                
+
+                // 변경 사항 저장
                 EditorUtility.SetDirty(_selectedUI);
             }
         }
