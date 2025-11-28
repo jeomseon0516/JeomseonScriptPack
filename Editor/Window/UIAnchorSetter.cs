@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
+using System.Linq;
 
 namespace Jeomseon.Editor.Window
 {
@@ -25,10 +26,9 @@ namespace Jeomseon.Editor.Window
 
             if (_selectedUI && GUILayout.Button("Set Anchors for Child"))
             {
-                foreach (RectTransform rectTransform in _selectedUI.GetComponentsInChildren<RectTransform>(false))
+                foreach (RectTransform rectTransform in _selectedUI.GetComponentsInChildren<RectTransform>(true)
+                    .Where(rt => !rt.GetComponent<Canvas>() && (!rt.parent || !rt.parent.GetComponent<LayoutGroup>())))
                 {
-                    if (rectTransform == _selectedUI) continue;
-                    
                     RectTransform parent = (rectTransform.parent as RectTransform)!;
                     if (!parent) return;
 
