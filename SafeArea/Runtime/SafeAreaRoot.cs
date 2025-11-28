@@ -39,22 +39,22 @@ namespace Jeomseon.SafeArea
         }
 
 #if UNITY_EDITOR
-        // 인스펙터에서 값 바꿀 때도 바로 반영되도록
-        private void OnValidate()
-        {
-            if (!isActiveAndEnabled)
-                return;
+        //// 인스펙터에서 값 바꿀 때도 바로 반영되도록
+        //private void OnValidate()
+        //{
+        //    if (!isActiveAndEnabled)
+        //        return;
 
-            if (_rectTransform == null)
-                _rectTransform = GetComponent<RectTransform>();
+        //    if (_rectTransform == null)
+        //        _rectTransform = GetComponent<RectTransform>();
 
-            ApplySafeArea(SafeAreaUtility.GetSafeArea());
-        }
+        //    ApplySafeArea(SafeAreaUtility.GetSafeArea());
+        //}
 #endif
 
         private void OnSafeAreaChanged(Rect safeArea)
         {
-            ApplySafeArea(safeArea);
+            // ApplySafeArea(safeArea);
         }
 
         private void ApplySafeArea(Rect safeArea)
