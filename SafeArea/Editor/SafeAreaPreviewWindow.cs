@@ -12,16 +12,33 @@ namespace Jeomseon.SafeAreaEditor
 {
     public class SafeAreaPreviewWindow : EditorWindow
     {
-        private bool _overrideEnabled = true;
-        private Rect _safeAreaRect;
-        private Vector2 _screenSize = new Vector2(1080, 1920);
+        // ----- Override용 값 (사용자가 편집하는 값) -----
+        // Override ON 일 때만 실제 프리뷰에 사용됨
+        private bool _overrideEnabled = false; // 기본은 OFF
+        private Rect _overrideSafeArea;
+        private Vector2 _overrideScreenSize = new Vector2(1080, 1920);
 
+        // ----- 시뮬레이터/Screen에서 읽어온 값 -----
+        // 항상 OnEditorUpdate에서 최신 값으로 유지 (가벼운 갱신)
+        private Vector2 _simScreenSize;
+        private Rect _simSafeArea;
+
+        // 변경 감지용 이전 값
+        private Vector2 _lastSimScreenSize;
+        private Rect _lastSimSafeArea;
+
+        // ----- Preview용 씬/카메라/RT -----
         private Scene _previewScene;
         private Camera _previewCamera;
         private RenderTexture _rt;
 
+        // 디버그용
         private int _srcCanvasCount;
         private int _previewCanvasCount;
+
+        // =====================================================================
+        //  Menu
+        // =====================================================================
 
         [MenuItem("Jeomseon/Safe Area/Preview Window")]
         public static void ShowWindow()
@@ -30,27 +47,78 @@ namespace Jeomseon.SafeAreaEditor
             window.minSize = new Vector2(480, 320);
         }
 
-        // ========================================
+        // =====================================================================
         //  Life Cycle
-        // ========================================
+        // =====================================================================
 
         private void OnEnable()
         {
-            // 기본값: SafeAreaUtility 기준 (GameView 의 실제 로직과 동일 경로)
-            RefreshFromSafeAreaUtility();
+            Debug.Log("Enable!");
+            // 시뮬레이터 값 초기화
+            RefreshSimulatorValues();
+            _lastSimScreenSize = _simScreenSize;
+            _lastSimSafeArea = _simSafeArea;
+
+            // Override 초기값은 "현재 시뮬레이터 상태"로 맞춰놓기
+            _overrideScreenSize = _simScreenSize;
+            _overrideSafeArea = _simSafeArea;
 
             CreatePreviewScene();
+
+            // GameView 변경 감지용 (하지만 무거운 작업은 여기서 안 함)
+            EditorApplication.update += OnEditorUpdate;
+
+            // 첫 진입 시 한 번만 전체 리빌드
             RebuildAll();
         }
 
         private void OnDisable()
         {
+            EditorApplication.update -= OnEditorUpdate;
             DestroyPreviewScene();
         }
 
-        // ========================================
+        /// <summary>
+        /// 매 프레임 호출되지만, 여기서는 "값 갱신 + Repaint"만 한다.
+        /// 무거운 Rebuild/Render 작업은 절대 여기서 하지 않는다.
+        /// </summary>
+        private void OnEditorUpdate()
+        {
+            // 항상 시뮬레이터(Screen) 값만 추적
+            Vector2 currentScreenSize = Handles.GetMainGameViewSize(); ;
+            Rect currentSafeArea = Screen.safeArea;
+
+            bool screenSizeChanged =
+                Vector2.Distance(currentScreenSize, _lastSimScreenSize) > 0.1f;
+            bool safeAreaChanged =
+                Mathf.Abs(currentSafeArea.x - _lastSimSafeArea.x) > 0.1f ||
+                Mathf.Abs(currentSafeArea.y - _lastSimSafeArea.y) > 0.1f ||
+                Mathf.Abs(currentSafeArea.width - _lastSimSafeArea.width) > 0.1f ||
+                Mathf.Abs(currentSafeArea.height - _lastSimSafeArea.height) > 0.1f;
+
+            if (screenSizeChanged || safeAreaChanged)
+            {
+                _simScreenSize = currentScreenSize;
+                _simSafeArea = currentSafeArea;
+                _lastSimScreenSize = currentScreenSize;
+                _lastSimSafeArea = currentSafeArea;
+
+                // Override가 꺼져 있으면, 필드에도 최신값을 보여주고 싶다면 동기화
+                if (!_overrideEnabled)
+                {
+                    _overrideScreenSize = _simScreenSize;
+                    _overrideSafeArea = _simSafeArea;
+                }
+
+                // 값만 갱신하고, 렌더/리빌드는 하지 않는다.
+                // 사용자가 Apply 버튼을 누르면 그때 한 번만 리빌드.
+                Repaint();
+            }
+        }
+
+        // =====================================================================
         //  GUI
-        // ========================================
+        // =====================================================================
 
         private void OnGUI()
         {
@@ -74,72 +142,95 @@ namespace Jeomseon.SafeAreaEditor
 
             EditorGUILayout.Space();
 
-            // ==== Override 토글 ====
+            // 시뮬레이터(현재 GameView) 기준 값 디스플레이 (읽기 전용)
+            using (new EditorGUI.DisabledScope(true))
+            {
+                EditorGUILayout.Vector2Field("Simulator Screen (px)", _simScreenSize);
+                EditorGUILayout.RectField("Simulator SafeArea (px)", _simSafeArea);
+            }
+
+            EditorGUILayout.Space();
+
+            // ----- Override 토글 -----
             bool prevOverride = _overrideEnabled;
             _overrideEnabled = EditorGUILayout.Toggle("Override Safe Area", _overrideEnabled);
 
             if (prevOverride != _overrideEnabled)
             {
-                // ✅ Override 를 끌 때(true → false)만
-                //    SafeAreaUtility에서 새 값 가져와 동기화
+                // Override를 껐을 때는, 필드를 시뮬레이터 상태로 맞춰두면 UX가 더 직관적
                 if (!_overrideEnabled)
                 {
-                    RefreshFromSafeAreaUtility();
+                    _overrideScreenSize = _simScreenSize;
+                    _overrideSafeArea = _simSafeArea;
                 }
 
+                // Override 상태가 바뀌면, 현재 설정에 맞춰 한 번만 전체 리빌드
                 RebuildAll();
-                return;
+                return; // 이 프레임에서는 여기까지만 GUI 진행
             }
 
             EditorGUILayout.Space();
 
-            // ==== Screen / SafeArea 편집 ====
+            // ----- Override 값 편집 (Override ON일 때만 수정 가능) -----
             using (new EditorGUI.DisabledScope(!_overrideEnabled))
             {
-                _screenSize = EditorGUILayout.Vector2Field("Screen Size (px)", _screenSize);
-                _safeAreaRect = EditorGUILayout.RectField("Safe Area (px)", _safeAreaRect);
+                _overrideScreenSize = EditorGUILayout.Vector2Field("Override Screen Size (px)", _overrideScreenSize);
+                _overrideSafeArea = EditorGUILayout.RectField("Override Safe Area (px)", _overrideSafeArea);
             }
 
             if (GUILayout.Button("Apply & Rebuild Preview"))
             {
-                // ✅ Apply 동작:
-                //  - Override OFF : SafeAreaUtility 값으로 다시 읽고 재빌드
-                //  - Override ON  : 사용자가 입력한 _screenSize / _safeAreaRect 그대로 재빌드
-                if (!_overrideEnabled)
-                {
-                    RefreshFromSafeAreaUtility();
-                }
-
+                // Override ON이면 사용자가 입력한 값을, OFF이면 시뮬레이터 값을 사용하여
+                // 한 번만 전체 리빌드
                 RebuildAll();
                 return;
             }
 
             EditorGUILayout.Space();
 
-            // ==== RenderTexture 준비 & 카메라 렌더 ====
+            // ----- 프리뷰 그리기 -----
             DrawPreview();
         }
 
-        // ========================================
-        //  High-level helpers
-        // ========================================
+        // =====================================================================
+        //  헬퍼: 값 계산 / 전체 리빌드
+        // =====================================================================
 
         /// <summary>
-        /// 런타임과 동일하게 SafeAreaUtility를 통해 화면 크기/세이프 에어리어를 읽어온다.
+        /// 시뮬레이터(Screen) 기준 값을 읽어서 _simScreenSize / _simSafeArea에 저장.
         /// </summary>
-        private void RefreshFromSafeAreaUtility()
+        private void RefreshSimulatorValues()
         {
-            // SafeAreaRoot가 사용하는 것과 동일한 함수 사용
-            _screenSize = SafeAreaUtility.GetScreenSize();
-            _safeAreaRect = SafeAreaUtility.GetSafeArea();
-
-            // 방어 코드: 혹시 유틸리티에서 0,0 나올 경우 Screen 값으로 보정
-            if (_screenSize.x <= 0 || _screenSize.y <= 0)
-            {
-                _screenSize = new Vector2(Screen.width, Screen.height);
-            }
+            _simScreenSize = Handles.GetMainGameViewSize();
+            _simSafeArea = Screen.safeArea;
         }
 
+        /// <summary>
+        /// 실제 프리뷰에 사용할 ScreenSize.
+        /// Override ON → 사용자가 입력한 값
+        /// Override OFF → 시뮬레이터(Screen) 값
+        /// </summary>
+        private Vector2 GetEffectiveScreenSize()
+        {
+            return _overrideEnabled ? _overrideScreenSize : _simScreenSize;
+        }
+
+        /// <summary>
+        /// 실제 프리뷰에 사용할 SafeArea.
+        /// Override ON → 사용자가 입력한 값
+        /// Override OFF → 시뮬레이터(Screen) 값
+        /// </summary>
+        private Rect GetEffectiveSafeArea()
+        {
+            return _overrideEnabled ? _overrideSafeArea : _simSafeArea;
+        }
+
+        /// <summary>
+        /// 프리뷰 전체 재구성:
+        /// 1) 캔버스 복제
+        /// 2) 카메라 설정
+        /// 3) SafeAreaRoot에 SafeArea 적용
+        /// </summary>
         private void RebuildAll()
         {
             CreatePreviewScene();
@@ -150,9 +241,9 @@ namespace Jeomseon.SafeAreaEditor
             Repaint();
         }
 
-        // ========================================
+        // =====================================================================
         //  PreviewScene 구축/해제
-        // ========================================
+        // =====================================================================
 
         private void CreatePreviewScene()
         {
@@ -163,7 +254,7 @@ namespace Jeomseon.SafeAreaEditor
 
             var camGO = new GameObject("SafeAreaPreviewCamera");
             _previewCamera = camGO.AddComponent<Camera>();
-            _previewCamera.clearFlags = CameraClearFlags.Skybox;   // ⬅ Skybox 배경
+            _previewCamera.clearFlags = CameraClearFlags.Skybox;   // 요청대로 Skybox
             _previewCamera.backgroundColor = Color.gray;
             _previewCamera.orthographic = true;
             _previewCamera.nearClipPlane = 0.1f;
@@ -198,16 +289,20 @@ namespace Jeomseon.SafeAreaEditor
             }
         }
 
-        // ========================================
-        //  Camera / RenderTexture / Draw
-        // ========================================
+        // =====================================================================
+        //  Camera / RenderTexture / Preview Draw
+        // =====================================================================
 
+        /// <summary>
+        /// 카메라를 "논리 해상도"에 맞게 설정.
+        /// 1유닛 = 1픽셀, 수직 범위: -H/2 ~ +H/2
+        /// </summary>
         private void UpdateCameraSettings()
         {
             if (_previewCamera == null)
                 return;
 
-            Vector2 screenSize = _screenSize;
+            Vector2 screenSize = GetEffectiveScreenSize();
 
             if (screenSize.y <= 0) screenSize.y = 1;
             if (screenSize.x <= 0) screenSize.x = screenSize.y;
@@ -223,10 +318,11 @@ namespace Jeomseon.SafeAreaEditor
             if (_previewCamera == null)
                 return;
 
-            Vector2 screenSize = _screenSize;
+            Vector2 screenSize = GetEffectiveScreenSize();
             int renderWidth = Mathf.Max(1, (int)screenSize.x);
             int renderHeight = Mathf.Max(1, (int)screenSize.y);
 
+            // RenderTexture 준비
             if (_rt == null || _rt.width != renderWidth || _rt.height != renderHeight)
             {
                 if (_previewCamera.targetTexture == _rt)
@@ -252,6 +348,7 @@ namespace Jeomseon.SafeAreaEditor
                 _previewCamera.Render();
             }
 
+            // 지금까지 그린 UI 아래의 남은 영역 전체를 프리뷰로 사용
             Rect layoutRect = GUILayoutUtility.GetRect(
                 GUIContent.none,
                 GUIStyle.none,
@@ -269,6 +366,7 @@ namespace Jeomseon.SafeAreaEditor
 
             if (windowAspect > targetAspect)
             {
+                // 창이 더 납작 → 높이에 맞추고 좌우 여백
                 float height = layoutRect.height;
                 float width = height * targetAspect;
                 float x = layoutRect.x + (layoutRect.width - width) * 0.5f;
@@ -277,6 +375,7 @@ namespace Jeomseon.SafeAreaEditor
             }
             else
             {
+                // 창이 더 세로 → 너비에 맞추고 상하 여백
                 float width = layoutRect.width;
                 float height = width / targetAspect;
                 float x = layoutRect.x;
@@ -290,15 +389,19 @@ namespace Jeomseon.SafeAreaEditor
             }
         }
 
-        // ========================================
+        // =====================================================================
         //  Canvas 복제 / SafeArea 적용
-        // ========================================
+        // =====================================================================
 
+        /// <summary>
+        /// 현재 Active Scene의 Canvas들을 PreviewScene으로 복제한다.
+        /// </summary>
         private void RebuildPreviewFromActiveScene()
         {
             if (!_previewScene.IsValid())
                 CreatePreviewScene();
 
+            // 카메라만 남기고 나머지 정리
             foreach (var root in _previewScene.GetRootGameObjects())
             {
                 if (root.name != "SafeAreaPreviewCamera")
@@ -322,7 +425,7 @@ namespace Jeomseon.SafeAreaEditor
                 foreach (var canvas in canvases)
                 {
                     if (canvas.renderMode == RenderMode.WorldSpace)
-                        continue;
+                        continue; // 3D UI는 제외
 
                     var clone = Object.Instantiate(canvas.gameObject);
                     clone.name = canvas.gameObject.name + " (Preview)";
@@ -342,6 +445,10 @@ namespace Jeomseon.SafeAreaEditor
             Canvas.ForceUpdateCanvases();
         }
 
+        /// <summary>
+        /// PreviewScene에 맞게 Canvas를 세팅한다.
+        /// (SafeAreaRoot가 실제 SafeArea 적용을 담당하므로, Canvas는 전체 화면 기준)
+        /// </summary>
         private void SetupCanvasForPreview(Canvas canvas)
         {
             if (canvas == null || _previewCamera == null)
@@ -356,7 +463,7 @@ namespace Jeomseon.SafeAreaEditor
             var rectTransform = canvas.GetComponent<RectTransform>();
             if (rectTransform != null)
             {
-                Vector2 screenSize = _screenSize;
+                Vector2 screenSize = GetEffectiveScreenSize();
 
                 rectTransform.localScale = Vector3.one;
                 rectTransform.localRotation = Quaternion.identity;
@@ -385,13 +492,17 @@ namespace Jeomseon.SafeAreaEditor
             }
         }
 
+        /// <summary>
+        /// 현재 설정된 safeArea / screenSize를 PreviewScene 안의 SafeAreaRoot들에게만 적용.
+        /// 원본 씬은 건드리지 않는다.
+        /// </summary>
         private void ApplyPreviewToScene()
         {
             if (!_previewScene.IsValid())
                 return;
 
-            Rect safeArea = _safeAreaRect;
-            Vector2 screenSize = _screenSize;
+            Rect safeArea = GetEffectiveSafeArea();
+            Vector2 screenSize = GetEffectiveScreenSize();
 
             var roots = _previewScene.GetRootGameObjects();
             foreach (var root in roots)
