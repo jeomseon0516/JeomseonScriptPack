@@ -3,37 +3,40 @@ using UnityEngine.UI;
 using TMPro;
 using Jeomseon.Attribute;
 
-[ExecuteAlways]
-public class TmpAutoEditorRefresh : MonoBehaviour
+namespace Jeomseon.UI
 {
-    [SerializeField, InitializeRequireComponent] private TextMeshProUGUI _targetText;
-    [SerializeField, InitializeRequireComponent] private RectTransform _contentToRefresh;
-
-    private string _lastValue;
-
-    void Update()
+    [ExecuteAlways]
+    public class TmpAutoEditorRefresh : MonoBehaviour
     {
-        if (!Application.isPlaying)
-        {
-            if (_targetText == null) return;
+        [SerializeField, InitializeRequireComponent] private TextMeshProUGUI _targetText;
+        [SerializeField, InitializeRequireComponent] private RectTransform _contentToRefresh;
 
-            if (_lastValue != _targetText.text)
+        private string _lastValue;
+
+        private void Update()
+        {
+            if (!Application.isPlaying)
             {
-                _lastValue = _targetText.text;
-                Refresh();
+                if (_targetText == null) return;
+
+                if (_lastValue != _targetText.text)
+                {
+                    _lastValue = _targetText.text;
+                    Refresh();
+                }
             }
         }
-    }
 
-    void Refresh()
-    {
-        _targetText.ForceMeshUpdate();
+        private void Refresh()
+        {
+            _targetText.ForceMeshUpdate();
 
-        LayoutRebuilder.ForceRebuildLayoutImmediate(_targetText.rectTransform);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_targetText.rectTransform);
 
-        if (_contentToRefresh != null)
-            LayoutRebuilder.ForceRebuildLayoutImmediate(_contentToRefresh);
+            if (_contentToRefresh != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_contentToRefresh);
 
-        Canvas.ForceUpdateCanvases();
+            Canvas.ForceUpdateCanvases();
+        }
     }
 }
