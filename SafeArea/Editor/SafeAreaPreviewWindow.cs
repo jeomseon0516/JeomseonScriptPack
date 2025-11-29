@@ -37,7 +37,8 @@ namespace Jeomseon.SafeAreaEditor
         private void OnEnable()
         {
             // 기본값: 현재 GameView 기준
-            RefreshScreenAndSafeAreaFromGameView();
+            RefreshScreenFromGameView();
+            RefreshSafeAreaFromGameView();
 
             CreatePreviewScene();
             RebuildAll();   // 캔버스 복제 + 카메라 설정 + SafeArea 적용
@@ -80,14 +81,12 @@ namespace Jeomseon.SafeAreaEditor
 
             if (prevOverride != _overrideEnabled)
             {
-                if (!_overrideEnabled)
-                {
-                    // Override 해제 → GameView 시뮬레이터 값으로 동기화
-                    RefreshScreenAndSafeAreaFromGameView();
-                }
+                // 토글이 바뀔 때마다 항상 현재 GameView 값으로 동기화
+                RefreshScreenFromGameView();
+                RefreshSafeAreaFromGameView(); // Override 켜질 때는 현재 기기 SafeArea를 기본값으로
 
                 RebuildAll();
-                return; // 아래 RT/Draw는 새 상태로 다음 프레임에서 그려져도 됨
+                return; // 이 프레임에서는 여기까지, 다음 프레임에서 새 상태로 DrawPreview
             }
 
             EditorGUILayout.Space();
@@ -101,11 +100,15 @@ namespace Jeomseon.SafeAreaEditor
 
             if (GUILayout.Button("Apply & Rebuild Preview"))
             {
+                // 👉 Apply 는 항상 현재 GameView 해상도를 다시 읽는다
+                RefreshScreenFromGameView();
+
                 if (!_overrideEnabled)
                 {
-                    // Override 꺼져 있으면, GameView 해상도/세이프 에어리어를 다시 읽는다
-                    RefreshScreenAndSafeAreaFromGameView();
+                    // Override 꺼져 있으면 SafeArea도 기기 값으로 다시 가져온다
+                    RefreshSafeAreaFromGameView();
                 }
+                // Override 켜져 있으면 SafeAreaRect 는 사용자가 입력한 값 유지
 
                 RebuildAll();
                 return;
@@ -122,12 +125,18 @@ namespace Jeomseon.SafeAreaEditor
         // ========================================
 
         /// <summary>
-        /// GameView의 Screen.width/height, Screen.safeArea를 읽어서 내부 상태 갱신
-        /// (Override가 꺼져 있을 때 사용)
+        /// GameView의 Screen.width/height 를 읽어서 내부 screenSize 갱신
         /// </summary>
-        private void RefreshScreenAndSafeAreaFromGameView()
+        private void RefreshScreenFromGameView()
         {
             _screenSize = new Vector2(Screen.width, Screen.height);
+        }
+
+        /// <summary>
+        /// GameView의 Screen.safeArea 를 읽어서 내부 safeAreaRect 갱신
+        /// </summary>
+        private void RefreshSafeAreaFromGameView()
+        {
             _safeAreaRect = Screen.safeArea;
         }
 
@@ -161,8 +170,8 @@ namespace Jeomseon.SafeAreaEditor
 
             var camGO = new GameObject("SafeAreaPreviewCamera");
             _previewCamera = camGO.AddComponent<Camera>();
-            _previewCamera.clearFlags = CameraClearFlags.SolidColor;
-            _previewCamera.backgroundColor = Color.gray;
+            _previewCamera.clearFlags = CameraClearFlags.Skybox;   // 🔵 요청대로 Skybox 사용
+            _previewCamera.backgroundColor = Color.gray;           // Skybox 없을 때 fallback
             _previewCamera.orthographic = true;
             _previewCamera.nearClipPlane = 0.1f;
             _previewCamera.farClipPlane = 100f;
@@ -210,11 +219,6 @@ namespace Jeomseon.SafeAreaEditor
                 return;
 
             Vector2 screenSize = _screenSize;
-            if (!_overrideEnabled)
-            {
-                // Override 꺼져 있으면, 내부 상태는 이미 GameView 기준으로 셋업되어 있음
-                screenSize = _screenSize;
-            }
 
             if (screenSize.y <= 0) screenSize.y = 1;
             if (screenSize.x <= 0) screenSize.x = screenSize.y;
