@@ -68,7 +68,7 @@ namespace Jeomseon.SafeAreaEditor
 
             EditorGUILayout.Space();
 
-            // Override 토글
+            // ==== Override 토글 ====
             bool prevOverride = _overrideEnabled;
             _overrideEnabled = EditorGUILayout.Toggle("Override Safe Area", _overrideEnabled);
 
@@ -81,12 +81,17 @@ namespace Jeomseon.SafeAreaEditor
                     _safeAreaRect = Screen.safeArea;
                 }
 
-                RebuildAndApply();
+                RebuildPreviewFromActiveScene();
+                UpdateCameraSettings();
+                ApplyPreviewToScene();
+                Canvas.ForceUpdateCanvases();
+                Repaint();
             }
 
             EditorGUILayout.Space();
 
-            // 수동으로 조절할 값 (Override 켜져 있을 때만 의미 있음)
+            // ==== Screen / SafeArea 편집 ====
+            // Override 켜졌을 때만 의미 있음
             using (new EditorGUI.DisabledScope(!_overrideEnabled))
             {
                 _screenSize = EditorGUILayout.Vector2Field("Screen Size (px)", _screenSize);
@@ -97,29 +102,92 @@ namespace Jeomseon.SafeAreaEditor
             {
                 if (!_overrideEnabled)
                 {
-                    // Override 끈 상태라면, 그냥 현재 GameView 값 다시 가져와서 재빌드
+                    // Override 꺼져 있으면 GameView 값으로 다시 가져와서 빌드
                     _screenSize = new Vector2(Screen.width, Screen.height);
                     _safeAreaRect = Screen.safeArea;
                 }
 
-                RebuildAndApply();
+                RebuildPreviewFromActiveScene();
+                UpdateCameraSettings();
+                ApplyPreviewToScene();
+                Canvas.ForceUpdateCanvases();
+                Repaint();
             }
 
             EditorGUILayout.Space();
 
-            DrawPreviewArea();
-        }
+            // ---- RenderTexture 준비 ----
+            Vector2 screenSize = _overrideEnabled
+                ? _screenSize
+                : new Vector2(Screen.width, Screen.height);
 
-        // 한 번에 처리하는 헬퍼
-        private void RebuildAndApply()
-        {
-            CreatePreviewScene();        // (이미 있으면 early-return)
-            RebuildPreviewFromActiveScene();
-            UpdateCameraSettings();
-            EnsureRenderTexture();
-            ApplyPreviewToScene();
-            Canvas.ForceUpdateCanvases();
-            Repaint();
+            int renderWidth = Mathf.Max(1, (int)screenSize.x);
+            int renderHeight = Mathf.Max(1, (int)screenSize.y);
+
+            if (_rt == null || _rt.width != renderWidth || _rt.height != renderHeight)
+            {
+                // 카메라가 사용 중이라면 먼저 끊어주기
+                if (_previewCamera != null && _previewCamera.targetTexture == _rt)
+                    _previewCamera.targetTexture = null;
+
+                if (_rt != null)
+                {
+                    _rt.Release();
+                    DestroyImmediate(_rt);
+                }
+
+                _rt = new RenderTexture(renderWidth, renderHeight, 24, RenderTextureFormat.ARGB32);
+                _rt.Create();
+            }
+
+            if (_previewCamera != null && _rt != null)
+            {
+                Canvas.ForceUpdateCanvases();
+
+                _previewCamera.targetTexture = _rt;
+                _previewCamera.pixelRect = new Rect(0, 0, renderWidth, renderHeight);
+                _previewCamera.Render();
+            }
+
+            // ==== 프리뷰 영역을 IMGUI 레이아웃에서 안전하게 받기 ====
+            Rect layoutRect = GUILayoutUtility.GetRect(
+                GUIContent.none,
+                GUIStyle.none,
+                GUILayout.ExpandWidth(true),
+                GUILayout.ExpandHeight(true)
+            );
+
+            if (layoutRect.width > 1f && layoutRect.height > 1f && _rt != null)
+            {
+                float targetAspect = screenSize.x / screenSize.y;
+                float windowAspect = layoutRect.width / layoutRect.height;
+
+                Rect previewRect;
+
+                if (windowAspect > targetAspect)
+                {
+                    // 창이 더 납작함 → 높이에 맞추고 좌우 여백
+                    float height = layoutRect.height;
+                    float width = height * targetAspect;
+                    float x = layoutRect.x + (layoutRect.width - width) * 0.5f;
+                    float y = layoutRect.y;
+                    previewRect = new Rect(x, y, width, height);
+                }
+                else
+                {
+                    // 창이 더 세로로 김 → 너비에 맞추고 상하 여백
+                    float width = layoutRect.width;
+                    float height = width / targetAspect;
+                    float x = layoutRect.x;
+                    float y = layoutRect.y + (layoutRect.height - height) * 0.5f;
+                    previewRect = new Rect(x, y, width, height);
+                }
+
+                if (Event.current.type == EventType.Repaint)
+                {
+                    GUI.DrawTexture(previewRect, _rt, ScaleMode.StretchToFill, false);
+                }
+            }
         }
 
         // === PreviewScene 구축/해제 ===
@@ -154,9 +222,7 @@ namespace Jeomseon.SafeAreaEditor
         private void DestroyPreviewScene()
         {
             if (_previewCamera != null && _previewCamera.targetTexture != null)
-            {
                 _previewCamera.targetTexture = null;
-            }
 
             if (_rt != null)
             {
@@ -190,41 +256,6 @@ namespace Jeomseon.SafeAreaEditor
             _previewCamera.aspect = screenSize.x / screenSize.y;
             _previewCamera.transform.position = new Vector3(0, 0, -10);
             _previewCamera.transform.rotation = Quaternion.identity;
-        }
-
-        // RenderTexture를 현재 screenSize에 맞게 한 번만 맞춰둔다
-        private void EnsureRenderTexture()
-        {
-            Vector2 screenSize = _overrideEnabled
-                ? _screenSize
-                : new Vector2(Screen.width, Screen.height);
-
-            int renderWidth = Mathf.Max(1, (int)screenSize.x);
-            int renderHeight = Mathf.Max(1, (int)screenSize.y);
-
-            if (_rt != null && _rt.width == renderWidth && _rt.height == renderHeight)
-                return;
-
-            if (_previewCamera != null && _previewCamera.targetTexture == _rt)
-            {
-                _previewCamera.targetTexture = null;
-            }
-
-            if (_rt != null)
-            {
-                _rt.Release();
-                DestroyImmediate(_rt);
-                _rt = null;
-            }
-
-            _rt = new RenderTexture(renderWidth, renderHeight, 24, RenderTextureFormat.ARGB32);
-            _rt.Create();
-
-            if (_previewCamera != null)
-            {
-                _previewCamera.targetTexture = _rt;
-                _previewCamera.pixelRect = new Rect(0, 0, renderWidth, renderHeight);
-            }
         }
 
         /// <summary>
@@ -267,8 +298,7 @@ namespace Jeomseon.SafeAreaEditor
 
                     SceneManager.MoveGameObjectToScene(clone, _previewScene);
 
-                    var cloneCanvas = clone.GetComponent<Canvas>();
-                    if (cloneCanvas != null)
+                    if (clone.TryGetComponent<Canvas>(out var cloneCanvas))
                     {
                         SetupCanvasForPreview(cloneCanvas);
                         SafeAreaPatchCore.EnsureSafeAreaRoot(cloneCanvas);
@@ -290,15 +320,11 @@ namespace Jeomseon.SafeAreaEditor
                 return;
 
             if (canvas.renderMode == RenderMode.ScreenSpaceOverlay)
-            {
                 canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            }
 
-            if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
-            {
-                canvas.worldCamera = _previewCamera;
-                canvas.planeDistance = 1f;
-            }
+            // 어떤 스크립트가 덮어써도 다시 우리 카메라로 맞춰준다
+            canvas.worldCamera = _previewCamera;
+            canvas.planeDistance = 1f;
 
             var rectTransform = canvas.GetComponent<RectTransform>();
             if (rectTransform != null)
@@ -319,9 +345,7 @@ namespace Jeomseon.SafeAreaEditor
 
             int uiLayer = LayerMask.NameToLayer("UI");
             if (uiLayer >= 0)
-            {
                 SetLayerRecursively(canvas.gameObject, uiLayer);
-            }
 
             if (!canvas.gameObject.activeInHierarchy)
                 canvas.gameObject.SetActive(true);
@@ -337,7 +361,8 @@ namespace Jeomseon.SafeAreaEditor
         }
 
         /// <summary>
-        /// SafeAreaRoot 들에 Preview용 SafeArea 적용
+        /// 현재 설정된 safeArea / screenSize를 PreviewScene 안의 SafeAreaRoot들에게만 적용.
+        /// 원본 씬은 건드리지 않는다.
         /// </summary>
         private void ApplyPreviewToScene()
         {
@@ -355,77 +380,6 @@ namespace Jeomseon.SafeAreaEditor
                 {
                     sr.ApplyPreview(safeArea, screenSize);
                 }
-            }
-        }
-
-        /// <summary>
-        /// 아래 남은 영역 전체를 프리뷰로 사용 (비율 유지)
-        /// </summary>
-        private void DrawPreviewArea()
-        {
-            EnsureRenderTexture();
-            if (_rt == null)
-                return;
-
-            // 🔴 여기 추가
-            if (_previewCamera != null)
-            {
-                // 혹시 모르니 다시 한 번 타겟 지정 & 렌더
-                _previewCamera.targetTexture = _rt;
-
-                Vector2 screenSizeForCam = _overrideEnabled
-                    ? _screenSize
-                    : new Vector2(Screen.width, Screen.height);
-
-                int renderWidth = Mathf.Max(1, (int)screenSizeForCam.x);
-                int renderHeight = Mathf.Max(1, (int)screenSizeForCam.y);
-                _previewCamera.pixelRect = new Rect(0, 0, renderWidth, renderHeight);
-
-                Canvas.ForceUpdateCanvases();
-                _previewCamera.Render();
-            }
-            // 🔴 여기까지 추가
-
-            // 지금까지 그린 GUI 아래의 남은 영역을 통째로 요청
-            Rect layoutRect = GUILayoutUtility.GetRect(
-                GUIContent.none,
-                GUIStyle.none,
-                GUILayout.ExpandWidth(true),
-                GUILayout.ExpandHeight(true)
-            );
-
-            if (layoutRect.width <= 1f || layoutRect.height <= 1f)
-                return;
-
-            Vector2 screenSize = _overrideEnabled
-                ? _screenSize
-                : new Vector2(Screen.width, Screen.height);
-
-            float targetAspect = screenSize.x / screenSize.y;
-            float windowAspect = layoutRect.width / layoutRect.height;
-
-            Rect previewRect;
-
-            if (windowAspect > targetAspect)
-            {
-                float height = layoutRect.height;
-                float width = height * targetAspect;
-                float x = layoutRect.x + (layoutRect.width - width) * 0.5f;
-                float y = layoutRect.y;
-                previewRect = new Rect(x, y, width, height);
-            }
-            else
-            {
-                float width = layoutRect.width;
-                float height = width / targetAspect;
-                float x = layoutRect.x;
-                float y = layoutRect.y + (layoutRect.height - height) * 0.5f;
-                previewRect = new Rect(x, y, width, height);
-            }
-
-            if (Event.current.type == EventType.Repaint)
-            {
-                GUI.DrawTexture(previewRect, _rt, ScaleMode.StretchToFill, false);
             }
         }
     }
