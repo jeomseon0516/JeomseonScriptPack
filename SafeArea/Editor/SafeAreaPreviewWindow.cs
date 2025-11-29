@@ -36,9 +36,8 @@ namespace Jeomseon.SafeAreaEditor
 
         private void OnEnable()
         {
-            // 기본값: 현재 GameView 기준
-            RefreshScreenFromGameView();
-            RefreshSafeAreaFromGameView();
+            // 기본값: SafeAreaUtility 기준 (GameView 의 실제 로직과 동일 경로)
+            RefreshFromSafeAreaUtility();
 
             CreatePreviewScene();
             RebuildAll();
@@ -81,12 +80,11 @@ namespace Jeomseon.SafeAreaEditor
 
             if (prevOverride != _overrideEnabled)
             {
-                // ✅ Override 를 끌 때( true → false )만
-                //    현재 시뮬레이터 해상도로 동기화
+                // ✅ Override 를 끌 때(true → false)만
+                //    SafeAreaUtility에서 새 값 가져와 동기화
                 if (!_overrideEnabled)
                 {
-                    RefreshScreenFromGameView();
-                    RefreshSafeAreaFromGameView();
+                    RefreshFromSafeAreaUtility();
                 }
 
                 RebuildAll();
@@ -105,12 +103,11 @@ namespace Jeomseon.SafeAreaEditor
             if (GUILayout.Button("Apply & Rebuild Preview"))
             {
                 // ✅ Apply 동작:
-                //  - Override OFF : 기기 해상도 & SafeArea 다시 읽고 재빌드
-                //  - Override ON  : 사용자가 입력한 값만 가지고 재빌드 (Screen.* 건드리지 않음)
+                //  - Override OFF : SafeAreaUtility 값으로 다시 읽고 재빌드
+                //  - Override ON  : 사용자가 입력한 _screenSize / _safeAreaRect 그대로 재빌드
                 if (!_overrideEnabled)
                 {
-                    RefreshScreenFromGameView();
-                    RefreshSafeAreaFromGameView();
+                    RefreshFromSafeAreaUtility();
                 }
 
                 RebuildAll();
@@ -127,14 +124,20 @@ namespace Jeomseon.SafeAreaEditor
         //  High-level helpers
         // ========================================
 
-        private void RefreshScreenFromGameView()
+        /// <summary>
+        /// 런타임과 동일하게 SafeAreaUtility를 통해 화면 크기/세이프 에어리어를 읽어온다.
+        /// </summary>
+        private void RefreshFromSafeAreaUtility()
         {
-            _screenSize = new Vector2(Screen.width, Screen.height);
-        }
+            // SafeAreaRoot가 사용하는 것과 동일한 함수 사용
+            _screenSize = SafeAreaUtility.GetScreenSize();
+            _safeAreaRect = SafeAreaUtility.GetSafeArea();
 
-        private void RefreshSafeAreaFromGameView()
-        {
-            _safeAreaRect = Screen.safeArea;
+            // 방어 코드: 혹시 유틸리티에서 0,0 나올 경우 Screen 값으로 보정
+            if (_screenSize.x <= 0 || _screenSize.y <= 0)
+            {
+                _screenSize = new Vector2(Screen.width, Screen.height);
+            }
         }
 
         private void RebuildAll()
@@ -160,7 +163,7 @@ namespace Jeomseon.SafeAreaEditor
 
             var camGO = new GameObject("SafeAreaPreviewCamera");
             _previewCamera = camGO.AddComponent<Camera>();
-            _previewCamera.clearFlags = CameraClearFlags.Skybox;   // 🔵 Skybox 배경
+            _previewCamera.clearFlags = CameraClearFlags.Skybox;   // ⬅ Skybox 배경
             _previewCamera.backgroundColor = Color.gray;
             _previewCamera.orthographic = true;
             _previewCamera.nearClipPlane = 0.1f;
