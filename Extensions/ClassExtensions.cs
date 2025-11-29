@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Jeomseon.Extensiosn
+namespace Jeomseon.Extensions
 {
     public static class ClassExtensions 
     {
