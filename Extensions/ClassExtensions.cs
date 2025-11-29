@@ -6,6 +6,9 @@ namespace Jeomseon.Extensiosn
 {
     public static class ClassExtensions 
     {
-        public static bool IsNotNull<T>(this T obj, Action<T> aciton) where T : class => obj is not null ? (aciton?.Invoke(obj), true) : false;
+        public static bool IsNotNull<T>(this T obj, Action<T> aciton) where T : class 
+        { 
+            return if (obj != null) { aciton?.Invoke(obj); return true; } else { return false; } 
+        }
     }
 }
