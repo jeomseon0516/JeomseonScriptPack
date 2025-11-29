@@ -367,6 +367,25 @@ namespace Jeomseon.SafeAreaEditor
             if (_rt == null)
                 return;
 
+            // 🔴 여기 추가
+            if (_previewCamera != null)
+            {
+                // 혹시 모르니 다시 한 번 타겟 지정 & 렌더
+                _previewCamera.targetTexture = _rt;
+
+                Vector2 screenSizeForCam = _overrideEnabled
+                    ? _screenSize
+                    : new Vector2(Screen.width, Screen.height);
+
+                int renderWidth = Mathf.Max(1, (int)screenSizeForCam.x);
+                int renderHeight = Mathf.Max(1, (int)screenSizeForCam.y);
+                _previewCamera.pixelRect = new Rect(0, 0, renderWidth, renderHeight);
+
+                Canvas.ForceUpdateCanvases();
+                _previewCamera.Render();
+            }
+            // 🔴 여기까지 추가
+
             // 지금까지 그린 GUI 아래의 남은 영역을 통째로 요청
             Rect layoutRect = GUILayoutUtility.GetRect(
                 GUIContent.none,
