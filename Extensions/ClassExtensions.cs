@@ -8,7 +8,7 @@ namespace Jeomseon.Extensiosn
     {
         public static bool IsNotNull<T>(this T obj, Action<T> aciton) where T : class 
         { 
-            return if (obj != null) { aciton?.Invoke(obj); return true; } else { return false; } 
+            if (obj != null) { aciton?.Invoke(obj); return true; } else { return false; } 
         }
     }
 }
